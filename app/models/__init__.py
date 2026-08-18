@@ -40,7 +40,9 @@ from app.models.notification import (
 from app.models.banner import Banner, BannerStatus
 from app.models.alert import OperationalAlert, OperationalAlertType, AlertSeverity
 from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
-from app.models.import_job import ImportJob, ImportError, ImportStatus
+from app.models.task import CampaignTask
+from app.models.activity import FieldActivityLog, VolunteerAttendanceRecord, ActivityStatus, AttendanceStatus
+from app.models.subscription import CampaignSubscription, SubscriptionInvoice, PlanTier, SubscriptionStatus, PaymentGateway, InvoiceStatus
 from app.models.webhook import WebhookEvent, SystemSetting, FileAsset
 
 __all__ = [
@@ -118,6 +120,11 @@ __all__ = [
     "ImportJob",
     "ImportError",
     "ImportStatus",
+    "CampaignTask",
+    "FieldActivityLog",
+    "VolunteerAttendanceRecord",
+    "CampaignSubscription",
+    "SubscriptionInvoice",
     "WebhookEvent",
     "SystemSetting",
     "FileAsset",

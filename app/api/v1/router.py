@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
+    activities,
     alerts,
     analytics,
     audit_logs,
@@ -20,6 +21,8 @@ from app.api.v1.endpoints import (
     positions,
     reports,
     results,
+    subscriptions,
+    tasks,
     templates,
     users,
     volunteers,
@@ -39,6 +42,9 @@ api_router.include_router(positions.router)
 api_router.include_router(constituencies.router)
 api_router.include_router(booths.router)
 api_router.include_router(candidates.router)
+api_router.include_router(tasks.router)
+api_router.include_router(activities.router)
+api_router.include_router(subscriptions.router)
 api_router.include_router(voters.router)
 api_router.include_router(imports.router)
 api_router.include_router(polling_stations.router)

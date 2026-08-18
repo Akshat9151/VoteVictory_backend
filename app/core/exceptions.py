@@ -103,7 +103,7 @@ class InvalidStateTransitionException(AppException):
         super().__init__(
             code="INVALID_STATE_TRANSITION",
             message=f"Cannot transition {entity_name} from status '{current_status}' to '{target_status}'.",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=getattr(status, "HTTP_422_UNPROCESSABLE_CONTENT", 422),
             details={"current_status": current_status, "target_status": target_status, "entity": entity_name}
         )
 

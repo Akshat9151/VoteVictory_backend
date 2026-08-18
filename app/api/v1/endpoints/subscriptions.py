@@ -1,9 +1,10 @@
+import uuid
 from datetime import datetime, timedelta
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-import uuid
 
 from app.core.database import get_db
 from app.models.subscription import (

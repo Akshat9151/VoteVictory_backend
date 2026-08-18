@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from fastapi import Request
 from sqlalchemy import select
@@ -12,6 +12,7 @@ from app.models.voter import Voter, VoterStatus, VoterVerification, VotingStatus
 from app.repositories.voter_repo import VoterRepository
 from app.schemas.common import PaginationMeta
 from app.schemas.voter import (
+    AudienceSplit,
     VoterCreate,
     VoterFilterParams,
     VoterUpdate,
@@ -32,7 +33,7 @@ class VoterService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_audience_split(self, organization_id: Optional[str] = None) -> dict:
+    async def get_audience_split(self, organization_id: Optional[str] = None) -> AudienceSplit:
         voters = await self.list_org_voters(organization_id)
         if not voters:
             voters = await self.list_org_voters(None)
@@ -41,13 +42,28 @@ class VoterService:
         whatsapp = sum(1 for v in voters if v.channel == "WhatsApp" and v.mobile)
         sms = sum(1 for v in voters if v.channel != "WhatsApp" or not v.mobile)
         denom = total if total > 0 else 1
-        return {
-            "total": total,
-            "whatsapp": whatsapp,
-            "sms": sms,
-            "whatsappPercent": round((whatsapp / denom) * 100),
-            "smsPercent": round((sms / denom) * 100)
-        }
+        return AudienceSplit(
+            total=total,
+            whatsapp=whatsapp,
+            sms=sms,
+            whatsappPercent=round((whatsapp / denom) * 100),
+            smsPercent=round((sms / denom) * 100)
+        )
+
+    async def add_voter(self, voter_in: Any, organization_id: Optional[str] = None) -> Voter:
+        v_in = voter_in if isinstance(voter_in, VoterCreate) else VoterCreate(**voter_in)
+        return await self.create_voter(request=None, voter_in=v_in, current_user=None)
+
+    async def add_voters_batch(self, voters_in: List[Any], organization_id: Optional[str] = None) -> List[Voter]:
+        models = [v if isinstance(v, VoterCreate) else VoterCreate(**v) for v in voters_in]
+        for m in models:
+            v_id = getattr(m, "id", None) or m.voter_id_number
+            if v_id:
+                existing = await self.voter_repo.get_by_id(v_id)
+                if existing:
+                    from app.core.exceptions import ConflictException
+                    raise ConflictException(f"Duplicate voter ID '{v_id}' already exists.")
+        return await self.create_batch(request=None, voters_in=models, current_user=None)
 
     async def create_voter(self, request: Optional[Request], voter_in: VoterCreate, current_user: Optional[User] = None) -> Voter:
         org_id = current_user.organization_id if current_user else "default_org"

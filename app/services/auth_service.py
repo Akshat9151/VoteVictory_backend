@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +32,14 @@ class AuthService:
         self.db = db
         self.user_repo = UserRepository(db)
 
-    async def authenticate_user(self, request: Request, login_data: LoginRequest) -> TokenResponse:
+    async def login(self, login_data: LoginRequest) -> TokenResponse:
+        return await self.authenticate_user(request=None, login_data=login_data)
+
+    async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
+        from app.schemas.auth import RefreshTokenRequest
+        return await self.refresh_access_token(request=None, refresh_data=RefreshTokenRequest(refresh_token=refresh_token))
+
+    async def authenticate_user(self, request: Optional[Request], login_data: LoginRequest) -> TokenResponse:
         user = None
         if login_data.email:
             user = await self.user_repo.get_by_email(login_data.email)
@@ -154,7 +162,12 @@ class AuthService:
             is_success=True
         )
 
-        user_full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Campaign User"
+        role_display_names = {
+            "superadmin": "Rameshwar Patel (Owner)",
+            "admin": "Rajesh Kumar (Campaign Admin)",
+            "volunteer": "Kailash Saini (Ward 02 Volunteer)"
+        }
+        user_full_name = role_display_names.get(target_role) or f"{user.first_name or ''} {user.last_name or ''}".strip() or "Campaign User"
         ward_label = "Ward 02 – Patel Basti" if target_role == "volunteer" else "All Wards"
 
         return TokenResponse(

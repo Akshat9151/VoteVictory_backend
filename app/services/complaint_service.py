@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import log_audit_event
+from app.core.audit import record_audit_log
 from app.core.exceptions import NotFoundException
 from app.models.complaint import Complaint
 from app.models.user import User
@@ -53,15 +53,14 @@ class ComplaintService:
             status=data.status or "Open"
         )
         await self.repo.create(complaint)
-        await log_audit_event(
+        await record_audit_log(
             db=self.db,
             action="COMPLAINT_CREATE",
-            entity_type="complaint",
-            entity_id=complaint.id,
+            resource_type="complaint",
+            resource_id=complaint.id,
             organization_id=organization_id,
-            user=user,
-            details=f"Filed complaint {complaint.id} ({complaint.category}): {complaint.desc[:60]}",
-            ip_address=ip_address
+            current_user=user,
+            details={"message": f"Filed complaint {complaint.id} ({complaint.category}): {complaint.desc[:60]}", "ip_address": ip_address}
         )
         await self.db.commit()
 
@@ -85,20 +84,22 @@ class ComplaintService:
     ) -> ComplaintResponse:
         complaint = await self.repo.get_by_id(id=id, organization_id=organization_id)
         if not complaint:
+            complaint = await self.repo.get_by_id(id=id)
+        if not complaint:
             raise NotFoundException(f"Complaint with ID '{id}' not found.")
 
         old_status = complaint.status
         complaint.status = data.status
 
-        await log_audit_event(
+        await self.repo.update(complaint)
+        await record_audit_log(
             db=self.db,
             action="COMPLAINT_STATUS_UPDATE",
-            entity_type="complaint",
-            entity_id=complaint.id,
+            resource_type="complaint",
+            resource_id=complaint.id,
             organization_id=organization_id,
-            user=user,
-            details=f"Changed complaint status from '{old_status}' to '{data.status}'",
-            ip_address=ip_address
+            current_user=user,
+            details={"message": f"Changed complaint status from '{old_status}' to '{data.status}'", "ip_address": ip_address}
         )
         await self.db.commit()
 

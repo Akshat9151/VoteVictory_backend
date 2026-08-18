@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import log_audit_event
+from app.core.audit import record_audit_log
 from app.models.broadcast import DeliveryLog
 from app.models.user import User
 from app.models.voter import Voter
@@ -91,15 +91,17 @@ class BroadcastService:
 
         # 4. Record Audit Log
         target_count = len(voters) if voters else 10
-        await log_audit_event(
+        await record_audit_log(
             db=self.db,
             action="BROADCAST_SEND",
-            entity_type="broadcast",
-            entity_id=broadcast_id,
+            resource_type="broadcast",
+            resource_id=broadcast_id,
             organization_id=organization_id,
-            user=user,
-            details=f"Dispatched broadcast message to {target_count} voters (Channel: {payload.channel}, Wards: {payload.selectedWards or 'All'})",
-            ip_address=ip_address
+            current_user=user,
+            details={
+                "message": f"Dispatched broadcast message to {target_count} voters (Channel: {payload.channel}, Wards: {payload.selectedWards or 'All'})",
+                "ip_address": ip_address
+            }
         )
         await self.db.commit()
 

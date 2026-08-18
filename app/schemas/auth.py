@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,19 +12,40 @@ class LoginRequest(BaseModel):
     device_info: Optional[str] = "Web Browser"
 
 
+class AuthUserProfile(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[str] = "superadmin"
+    phone: Optional[str] = None
+    ward: Optional[str] = None
+    organization_id: Optional[str] = None
+    roles: List[str] = []
+    permissions: List[str] = []
+    is_superuser: bool = False
+    mfa_enabled: bool = False
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token: Optional[str] = None
     token_type: str = "bearer"
     expires_in: Optional[int] = 3600
-    user: Any = None
+    user: Optional[AuthUserProfile] = None
 
     def __init__(self, **data):
         if "token" not in data and "access_token" in data:
             data["token"] = data["access_token"]
         if "access_token" not in data and "token" in data:
             data["access_token"] = data["token"]
+        if "user" in data and isinstance(data["user"], dict):
+            data["user"] = AuthUserProfile(**data["user"])
         super().__init__(**data)
 
 

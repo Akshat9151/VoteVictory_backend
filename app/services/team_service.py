@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import log_audit_event
+from app.core.audit import record_audit_log
 from app.models.team import TeamMember
 from app.models.user import User
 from app.repositories.booth_repo import BoothRepository
@@ -57,15 +57,14 @@ class TeamService:
             addedDate=added_date_str
         )
         await self.team_repo.create(member)
-        await log_audit_event(
+        await record_audit_log(
             db=self.db,
             action="TEAM_MEMBER_ADD",
-            entity_type="team_member",
-            entity_id=member.id,
+            resource_type="team_member",
+            resource_id=member.id,
             organization_id=organization_id,
-            user=user,
-            details=f"Added team member {member.name} ({member.role})",
-            ip_address=ip_address
+            current_user=user,
+            details={"message": f"Added team member {member.name} ({member.role})", "ip_address": ip_address}
         )
         await self.db.commit()
 

@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import log_audit_event
+from app.core.audit import record_audit_log
 from app.core.config import settings
 from app.core.exceptions import ValidationException
 from app.models.expense import Expense
@@ -73,15 +73,14 @@ class ExpenseService:
         )
         await self.repo.create(expense)
 
-        await log_audit_event(
+        await record_audit_log(
             db=self.db,
             action="EXPENSE_ADD",
-            entity_type="expense",
-            entity_id=expense.id,
+            resource_type="expense",
+            resource_id=expense.id,
             organization_id=organization_id,
-            user=user,
-            details=f"Added expense ₹{expense.amount:,.2f} for '{expense.category}' (Mode: {expense.mode}). New total: ₹{projected_total:,.2f}",
-            ip_address=ip_address
+            current_user=user,
+            details={"message": f"Added expense ₹{expense.amount:,.2f} for '{expense.category}' (Mode: {expense.mode}). New total: ₹{projected_total:,.2f}", "ip_address": ip_address}
         )
         await self.db.commit()
 

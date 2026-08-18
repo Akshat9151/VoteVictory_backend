@@ -239,4 +239,6 @@ async def test_audit_logs_flow(client: AsyncClient, admin_token: str):
     headers = {"Authorization": f"Bearer {admin_token}"}
     res = await client.get("/api/v1/audit-logs", headers=headers)
     assert res.status_code == 200
-    assert isinstance(res.json(), list)
+    data = res.json()
+    items = data.get("data", {}).get("items", data) if isinstance(data, dict) else data
+    assert isinstance(items, list)

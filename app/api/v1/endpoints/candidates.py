@@ -5,7 +5,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_optional_current_user, require_permissions
+from app.core.dependencies import get_optional_current_user, require_permissions, require_roles
 from app.core.permissions import PermissionCode
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.organization import Organization
@@ -94,8 +94,8 @@ async def get_candidates(
     return [serialize_candidate(c) for c in candidates]
 
 
-@router.post("", response_model=CandidateResponse)
-@router.post("/", response_model=CandidateResponse)
+@router.post("", response_model=CandidateResponse, dependencies=[Depends(require_roles(["superadmin", "admin"]))])
+@router.post("/", response_model=CandidateResponse, dependencies=[Depends(require_roles(["superadmin", "admin"]))])
 async def add_candidate(
     request: Request,
     cand_in: CandidateCreate,

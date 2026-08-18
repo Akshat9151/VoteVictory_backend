@@ -52,7 +52,7 @@ async def get_audience_split(
     org_id = current_user.organization_id if current_user else await get_default_org_id(db)
     service = VoterService(db)
     split = await service.get_audience_split(organization_id=org_id)
-    return AudienceSplit(**split)
+    return split if isinstance(split, AudienceSplit) else AudienceSplit(**split)
 
 
 @router.post("", response_model=VoterResponse)

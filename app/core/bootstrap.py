@@ -159,19 +159,19 @@ async def seed_system_data(db: AsyncSession) -> None:
         db.add_all(candidates)
 
     # 6. Seed Voters if empty
-    voter_stmt = select(Voter).where(Voter.organization_id == org.id).limit(1)
+    voter_stmt = select(Voter).limit(1)
     if not (await db.execute(voter_stmt)).scalars().first():
         voters = [
-            Voter(id="V-04-101", organization_id=org.id, name="Rameshwar Patel", age=48, gender="Male", ward="Ward 04", mobile="+91 98290 14285", channel="WhatsApp", consent="Verified", source="Official Roll", status="Valid"),
-            Voter(id="V-04-102", organization_id=org.id, name="Sita Devi Patel", age=42, gender="Female", ward="Ward 04", mobile="+91 98290 14286", channel="WhatsApp", consent="Verified", source="Official Roll", status="Valid"),
-            Voter(id="V-02-103", organization_id=org.id, name="Gopal Lal Gurjar", age=58, gender="Male", ward="Ward 02", mobile="+91 97840 55190", channel="SMS Only", consent="Pending", source="Booth Survey", status="Valid"),
-            Voter(id="V-02-104", organization_id=org.id, name="Kamla Devi Gurjar", age=38, gender="Female", ward="Ward 02", mobile="+91 96021 44556", channel="WhatsApp", consent="Verified", source="OCR Scan", status="Valid"),
-            Voter(id="V-01-105", organization_id=org.id, name="Rahul Sharma", age=22, gender="Male", ward="Ward 01", mobile="+91 94140 11920", channel="WhatsApp", consent="Verified", source="Youth Drive", status="Valid"),
-            Voter(id="V-04-106", organization_id=org.id, name="Kavita Meena", age=24, gender="Female", ward="Ward 04", mobile="+91 98288 33119", channel="WhatsApp", consent="Verified", source="Women SHG", status="Valid"),
-            Voter(id="V-03-107", organization_id=org.id, name="Suraj Mal Jat", age=65, gender="Male", ward="Ward 03", mobile="", channel="SMS Only", consent="Missing Mobile", source="Official Roll", status="Missing Mobile"),
-            Voter(id="V-02-108", organization_id=org.id, name="Sunil Kumar Gurjar", age=21, gender="Male", ward="Ward 02", mobile="+91 96021 77890", channel="WhatsApp", consent="Verified", source="Youth Drive", status="Valid"),
-            Voter(id="V-04-109", organization_id=org.id, name="Manju Devi Saini", age=35, gender="Female", ward="Ward 04", mobile="+91 94140 88219", channel="WhatsApp", consent="Verified", source="Women SHG", status="Valid"),
-            Voter(id="V-01-110", organization_id=org.id, name="Babulal Prajapat", age=52, gender="Male", ward="Ward 01", mobile="+91 98290 66451", channel="SMS Only", consent="Verified", source="Official Roll", status="Valid")
+            Voter(id="V-04-101", voter_id_number="V-04-101", organization_id=org.id, name="Rameshwar Patel", age=48, gender="Male", ward="Ward 04", mobile="+91 98290 14285", channel="WhatsApp", consent="Verified", source="Official Roll", status="Valid"),
+            Voter(id="V-04-102", voter_id_number="V-04-102", organization_id=org.id, name="Sita Devi Patel", age=42, gender="Female", ward="Ward 04", mobile="+91 98290 14286", channel="WhatsApp", consent="Verified", source="Official Roll", status="Valid"),
+            Voter(id="V-02-103", voter_id_number="V-02-103", organization_id=org.id, name="Gopal Lal Gurjar", age=58, gender="Male", ward="Ward 02", mobile="+91 97840 55190", channel="SMS Only", consent="Pending", source="Booth Survey", status="Valid"),
+            Voter(id="V-02-104", voter_id_number="V-02-104", organization_id=org.id, name="Kamla Devi Gurjar", age=38, gender="Female", ward="Ward 02", mobile="+91 96021 44556", channel="WhatsApp", consent="Verified", source="OCR Scan", status="Valid"),
+            Voter(id="V-01-105", voter_id_number="V-01-105", organization_id=org.id, name="Rahul Sharma", age=22, gender="Male", ward="Ward 01", mobile="+91 94140 11920", channel="WhatsApp", consent="Verified", source="Youth Drive", status="Valid"),
+            Voter(id="V-04-106", voter_id_number="V-04-106", organization_id=org.id, name="Kavita Meena", age=24, gender="Female", ward="Ward 04", mobile="+91 98288 33119", channel="WhatsApp", consent="Verified", source="Women SHG", status="Valid"),
+            Voter(id="V-03-107", voter_id_number="V-03-107", organization_id=org.id, name="Suraj Mal Jat", age=65, gender="Male", ward="Ward 03", mobile="", channel="SMS Only", consent="Missing Mobile", source="Official Roll", status="Missing Mobile"),
+            Voter(id="V-02-108", voter_id_number="V-02-108", organization_id=org.id, name="Sunil Kumar Gurjar", age=21, gender="Male", ward="Ward 02", mobile="+91 96021 77890", channel="WhatsApp", consent="Verified", source="Youth Drive", status="Valid"),
+            Voter(id="V-04-109", voter_id_number="V-04-109", organization_id=org.id, name="Manju Devi Saini", age=35, gender="Female", ward="Ward 04", mobile="+91 94140 88219", channel="WhatsApp", consent="Verified", source="Women SHG", status="Valid"),
+            Voter(id="V-01-110", voter_id_number="V-01-110", organization_id=org.id, name="Babulal Prajapat", age=52, gender="Male", ward="Ward 01", mobile="+91 98290 66451", channel="SMS Only", consent="Verified", source="Official Roll", status="Valid")
         ]
         db.add_all(voters)
 

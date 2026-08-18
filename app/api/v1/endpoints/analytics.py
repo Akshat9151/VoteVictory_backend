@@ -11,14 +11,29 @@ from app.models.team import Volunteer
 from app.models.user import User
 from app.models.voter import Voter
 from app.schemas.analytics import (
+    AnalyticsChartsResponse,
     AnalyticsData,
     ChannelDeliveryItem,
     MaterialPrintItem,
     VolunteerProductivityItem,
     WardCoverageItem,
 )
+from app.schemas.common import APIResponse
+from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Operational Analytics & Charts Engine"])
+
+
+@router.get("/charts", response_model=APIResponse[AnalyticsChartsResponse])
+async def get_analytics_charts(
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve time-series charts, area/volunteer performance and funnels."""
+    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    service = AnalyticsService(db)
+    charts = await service.get_charts_data(organization_id=org_id)
+    return APIResponse(success=True, data=charts)
 
 
 async def get_default_org_id(db: AsyncSession) -> str:

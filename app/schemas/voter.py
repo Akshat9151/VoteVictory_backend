@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class VoterBase(BaseModel):
+    id: Optional[str] = None
     name: Optional[str] = None
     voter_id_number: Optional[str] = None
     first_name: Optional[str] = None
@@ -28,6 +29,12 @@ class VoterBase(BaseModel):
     notes: Optional[str] = None
 
     def __init__(self, **data):
+        # Sync id <-> voter_id_number
+        if "id" in data and not data.get("voter_id_number"):
+            data["voter_id_number"] = data["id"]
+        elif "voter_id_number" in data and not data.get("id"):
+            data["id"] = data["voter_id_number"]
+
         # Sync name <-> first_name / last_name
         if "name" in data and data["name"] and not data.get("first_name"):
             parts = data["name"].split(" ", 1)

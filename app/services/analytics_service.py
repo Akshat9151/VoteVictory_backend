@@ -198,8 +198,8 @@ class AnalyticsService:
             voter_stmt = voter_stmt.where(Voter.election_id == election_id)
         all_voters = (await self.db.execute(voter_stmt)).scalars().all()
         total_voters = len(all_voters)
-        checked_in = sum(1 for v in all_voters if v.is_checked_in)
-        voted = sum(1 for v in all_voters if v.voting_status == VotingStatus.VOTED)
+        checked_in = sum(1 for v in all_voters if getattr(v, "is_checked_in", False) or v.voting_status in [VotingStatus.CHECKED_IN, VotingStatus.VOTED])
+        voted = sum(1 for v in all_voters if getattr(v, "has_voted", False) or v.voting_status == VotingStatus.VOTED)
 
         voter_funnel = {
             "registered": total_voters,

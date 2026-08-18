@@ -36,8 +36,7 @@ class AuthService:
         return await self.authenticate_user(request=None, login_data=login_data)
 
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
-        from app.schemas.auth import RefreshTokenRequest
-        return await self.refresh_access_token(request=None, refresh_data=RefreshTokenRequest(refresh_token=refresh_token))
+        return await self.refresh_access_token(request=None, refresh_token=refresh_token)
 
     async def authenticate_user(self, request: Optional[Request], login_data: LoginRequest) -> TokenResponse:
         user = None
@@ -61,17 +60,19 @@ class AuthService:
             raise AuthenticationException("Invalid credentials.")
 
         # Check account lockout
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc):
-            await record_security_event(
-                self.db,
-                request,
-                event_type="LOCKED_ACCOUNT_LOGIN_ATTEMPT",
-                severity=SecuritySeverity.MEDIUM,
-                user_id=user.id,
-                organization_id=user.organization_id,
-                details={"locked_until": user.locked_until.isoformat()}
-            )
-            raise AccountLockedException(unlock_time=user.locked_until.isoformat())
+        if user.locked_until:
+            locked_dt = user.locked_until.replace(tzinfo=timezone.utc) if user.locked_until.tzinfo is None else user.locked_until
+            if locked_dt > datetime.now(timezone.utc):
+                await record_security_event(
+                    self.db,
+                    request,
+                    event_type="LOCKED_ACCOUNT_LOGIN_ATTEMPT",
+                    severity=SecuritySeverity.MEDIUM,
+                    user_id=user.id,
+                    organization_id=user.organization_id,
+                    details={"locked_until": user.locked_until.isoformat()}
+                )
+                raise AccountLockedException(unlock_time=user.locked_until.isoformat())
 
         # Verify password if password was provided in request
         if login_data.password and not verify_password(login_data.password, user.password_hash):
@@ -145,8 +146,8 @@ class AuthService:
             user_id=user.id,
             refresh_token_hash=token_hash,
             device_info=login_data.device_info,
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("User-Agent"),
+            ip_address=request.client.host if (request and getattr(request, "client", None)) else None,
+            user_agent=request.headers.get("User-Agent") if (request and hasattr(request, "headers")) else None,
             expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
             last_active_at=datetime.now(timezone.utc)
         )
@@ -192,11 +193,14 @@ class AuthService:
             }
         )
 
-    async def refresh_access_token(self, request: Request, refresh_token: str) -> TokenResponse:
+    async def refresh_access_token(self, request: Optional[Request], refresh_token: str) -> TokenResponse:
         token_hash = hash_token(refresh_token)
         session = await self.user_repo.get_session_by_hash(token_hash)
 
-        if not session or session.is_revoked or session.expires_at < datetime.now(timezone.utc):
+        now_utc = datetime.now(timezone.utc)
+        exp_dt = session.expires_at.replace(tzinfo=timezone.utc) if (session and session.expires_at and session.expires_at.tzinfo is None) else (session.expires_at if session else None)
+
+        if not session or session.is_revoked or (exp_dt and exp_dt < now_utc):
             await record_security_event(
                 self.db,
                 request,
@@ -235,8 +239,8 @@ class AuthService:
             user_id=user.id,
             refresh_token_hash=new_token_hash,
             device_info=session.device_info,
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("User-Agent"),
+            ip_address=request.client.host if (request and getattr(request, "client", None)) else None,
+            user_agent=request.headers.get("User-Agent") if (request and hasattr(request, "headers")) else None,
             expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
             last_active_at=datetime.now(timezone.utc)
         )

@@ -55,20 +55,35 @@ class VoterService:
         return await self.create_voter(request=None, voter_in=v_in, current_user=None)
 
     async def add_voters_batch(self, voters_in: List[Any], organization_id: Optional[str] = None) -> List[Voter]:
-        models = [v if isinstance(v, VoterCreate) else VoterCreate(**v) for v in voters_in]
-        for m in models:
-            v_id = getattr(m, "id", None) or m.voter_id_number
-            if v_id:
-                existing = await self.voter_repo.get_by_id(v_id)
+        created: List[Voter] = []
+        for raw in voters_in:
+            raw_id = raw.get("id") or raw.get("voter_id_number") if isinstance(raw, dict) else (getattr(raw, "id", None) or getattr(raw, "voter_id_number", None))
+            v_in = VoterCreate(**raw) if isinstance(raw, dict) else raw
+            if raw_id:
+                setattr(v_in, "id", raw_id)
+                setattr(v_in, "voter_id_number", raw_id)
+                stmt = select(Voter).where((Voter.id == raw_id) | (Voter.voter_id_number == raw_id))
+                existing = (await self.db.execute(stmt)).scalars().first()
                 if existing:
                     from app.core.exceptions import ConflictException
-                    raise ConflictException(f"Duplicate voter ID '{v_id}' already exists.")
-        return await self.create_batch(request=None, voters_in=models, current_user=None)
+                    raise ConflictException(f"Duplicate voter ID '{raw_id}' already exists.")
+            voter = await self.create_voter(request=None, voter_in=v_in, current_user=None)
+            created.append(voter)
+        return created
 
     async def create_voter(self, request: Optional[Request], voter_in: VoterCreate, current_user: Optional[User] = None) -> Voter:
         org_id = current_user.organization_id if current_user else "default_org"
         voter_name = voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}".strip() or "Voter"
-        voter_id_num = voter_in.voter_id_number or f"V-{voter_in.ward or '01'}-{int(datetime.now().timestamp()) % 10000}"
+        voter_id_num = getattr(voter_in, "id", None) or voter_in.voter_id_number
+
+        if voter_id_num:
+            stmt = select(Voter).where((Voter.id == voter_id_num) | (Voter.voter_id_number == voter_id_num))
+            existing = (await self.db.execute(stmt)).scalars().first()
+            if existing:
+                from app.core.exceptions import ConflictException
+                raise ConflictException(f"Duplicate voter ID '{voter_id_num}' already exists.")
+        else:
+            voter_id_num = f"V-{voter_in.ward or '01'}-{int(datetime.now().timestamp()) % 10000}"
 
         voter = Voter(
             id=voter_id_num,

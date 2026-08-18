@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -41,11 +43,11 @@ class VolunteerProfile(BaseModel):
 
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     volunteer_code = Column(String(50), unique=True, nullable=False, index=True) # e.g. VOL-1002
     profile_photo_url = Column(String(512), nullable=True)
     supervisor_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     # Assignments
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="SET NULL"), nullable=True, index=True)
     constituency_id = Column(String(36), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -97,7 +99,7 @@ class VolunteerTarget(BaseModel):
     daily_target = Column(Integer, default=200, nullable=False)
     weekly_target = Column(Integer, default=1200, nullable=False)
     monthly_target = Column(Integer, default=5000, nullable=False)
-    
+
     target_start_date = Column(DateTime(timezone=True), nullable=True)
     target_end_date = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)

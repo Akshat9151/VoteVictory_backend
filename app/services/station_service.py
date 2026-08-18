@@ -1,7 +1,9 @@
 from typing import List, Optional, Tuple
+
 from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import ResourceNotFoundException
 from app.models.polling_station import PollingStation, VolunteerAssignment

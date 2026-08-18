@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -32,13 +34,13 @@ class OperationalAlert(BaseModel):
 
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     alert_type = Column(Enum(OperationalAlertType), nullable=False, index=True)
     severity = Column(Enum(AlertSeverity), default=AlertSeverity.MEDIUM, nullable=False, index=True)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     metadata_json = Column(Text, nullable=True)
-    
+
     is_resolved = Column(Boolean, default=False, nullable=False, index=True)
     resolved_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)

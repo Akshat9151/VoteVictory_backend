@@ -1,5 +1,4 @@
-import pytest
-from app.models.data_collection import DataSubmission, SubmissionStatus
+from app.models.data_collection import DataSubmission
 from app.services.data_collection_service import DataCollectionService
 
 

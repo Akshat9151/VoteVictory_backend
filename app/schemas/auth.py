@@ -1,20 +1,52 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, EmailStr, Field
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=6)
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = "admin"
+    password: Optional[str] = None
     mfa_code: Optional[str] = Field(None, description="6-digit TOTP / OTP code if MFA is enabled")
     device_info: Optional[str] = "Web Browser"
+
+
+class AuthUserProfile(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[str] = "superadmin"
+    phone: Optional[str] = None
+    ward: Optional[str] = None
+    organization_id: Optional[str] = None
+    roles: List[str] = []
+    permissions: List[str] = []
+    is_superuser: bool = False
+    mfa_enabled: bool = False
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
+    token: Optional[str] = None
     token_type: str = "bearer"
-    expires_in: int # seconds
-    user: Dict[str, Any]
+    expires_in: Optional[int] = 3600
+    user: Optional[AuthUserProfile] = None
+
+    def __init__(self, **data):
+        if "token" not in data and "access_token" in data:
+            data["token"] = data["access_token"]
+        if "access_token" not in data and "token" in data:
+            data["access_token"] = data["token"]
+        if "user" in data and isinstance(data["user"], dict):
+            data["user"] = AuthUserProfile(**data["user"])
+        super().__init__(**data)
 
 
 LoginResponse = TokenResponse
@@ -23,7 +55,7 @@ LoginResponse = TokenResponse
 class TokenPayload(BaseModel):
     sub: str
     org_id: Optional[str] = None
-    email: str
+    email: Optional[str] = None
     roles: List[str] = []
     permissions: List[str] = []
     exp: int
@@ -31,8 +63,8 @@ class TokenPayload(BaseModel):
 
 class UserRegisterRequest(BaseModel):
     organization_id: Optional[str] = None
-    email: EmailStr
-    password: str = Field(..., min_length=8)
+    email: str
+    password: str = Field(..., min_length=6)
     first_name: str
     last_name: str
     phone: Optional[str] = None
@@ -40,6 +72,10 @@ class UserRegisterRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
 
 
 class MFASetupResponse(BaseModel):
@@ -53,7 +89,7 @@ class MFAVerifyRequest(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class PasswordResetConfirm(BaseModel):

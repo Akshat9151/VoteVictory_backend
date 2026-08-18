@@ -1,12 +1,13 @@
-import base64
 import hashlib
 import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Union
+
 import jwt
-from passlib.context import CryptContext
 import pyotp
+from passlib.context import CryptContext
+
 from app.core.config import settings
 
 # Password hashing context with Argon2id primary and Bcrypt fallback
@@ -47,7 +48,7 @@ def create_access_token(
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode: Dict[str, Any] = {
         "sub": str(subject),
         "org_id": str(organization_id) if organization_id else None,

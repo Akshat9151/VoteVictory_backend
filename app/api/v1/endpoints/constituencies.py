@@ -1,6 +1,8 @@
 from typing import List
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode

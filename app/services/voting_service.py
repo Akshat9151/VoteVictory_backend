@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+
 from fastapi import Request
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.core.audit import record_audit_log, record_security_event
-from app.core.config import settings
 from app.core.exceptions import (
     AppException,
     DoubleVotingException,
@@ -13,12 +13,12 @@ from app.core.exceptions import (
     ResourceNotFoundException,
     VoterEligibilityException,
 )
+from app.core.security import compute_ballot_hash, generate_ballot_nonce, hash_token
 from app.models.audit import SecuritySeverity
-from app.models.candidate import Candidate, CandidateStatus
-from app.models.election import Election, ElectionStatus, Position
+from app.models.candidate import CandidateStatus
+from app.models.election import ElectionStatus, Position
 from app.models.voter import Voter, VoterStatus, VotingStatus
 from app.models.voting import Ballot, Vote, VotingSession, VotingSessionStatus
-from app.core.security import compute_ballot_hash, generate_ballot_nonce, hash_token
 from app.repositories.election_repo import ElectionRepository
 from app.repositories.voter_repo import VoterRepository
 from app.repositories.voting_repo import VotingRepository
@@ -187,7 +187,7 @@ class VotingEngineService:
             pos = (await self.db.execute(select(Position).where(Position.id == sel.position_id))).scalars().first()
             if not pos:
                 raise AppException(code="INVALID_POSITION", message=f"Position ID '{sel.position_id}' not found.")
-            
+
             if len(sel.candidate_ids) > pos.max_selections:
                 raise AppException(
                     code="MAX_SELECTIONS_EXCEEDED",
@@ -208,7 +208,7 @@ class VotingEngineService:
             cast_timestamp=cast_time,
             is_valid=True
         )
-        
+
         votes = []
         for sel in vote_in.selections:
             for cid in sel.candidate_ids:

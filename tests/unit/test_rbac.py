@@ -1,4 +1,3 @@
-import pytest
 from app.core.permissions import DEFAULT_ROLE_PERMISSIONS, PermissionCode, RoleCode
 
 

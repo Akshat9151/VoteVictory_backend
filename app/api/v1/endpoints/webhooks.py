@@ -1,17 +1,16 @@
 import json
-import uuid
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.adapters.instagram_adapter import InstagramProviderAdapter
 from app.adapters.sms_adapter import SMSProviderAdapter
 from app.adapters.whatsapp_adapter import WhatsAppProviderAdapter
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import WebhookVerificationException
-from app.models.notification import DeliveryStatus, NotificationDelivery, NotificationRecipient
 from app.models.webhook import WebhookEvent
-from app.repositories.notification_repo import NotificationRepository
 from app.schemas.common import APIResponse
 from app.schemas.webhook import WebhookReceiptResponse
 
@@ -30,7 +29,7 @@ async def handle_sms_webhook(
         raise WebhookVerificationException("SMS", "Twilio HMAC-SHA256 signature mismatch.")
 
     payload = await request.form() if "form" in request.headers.get("content-type", "") else await request.json()
-    
+
     event = WebhookEvent(
         provider="SMS",
         event_type="SMS_DELIVERY_STATUS",

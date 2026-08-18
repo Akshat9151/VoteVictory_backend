@@ -1,27 +1,24 @@
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional
-from sqlalchemy import func, select, desc
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.area import Area, Booth
 from app.models.candidate import Candidate
 from app.models.data_collection import DataSubmission, SubmissionStatus
-from app.models.election import Constituency, Election, ElectionStatus
+from app.models.election import Election, ElectionStatus
 from app.models.notification import NotificationCampaign, NotificationChannel
 from app.models.polling_station import PollingStation
-from app.models.voter import Voter, VoterStatus, VotingStatus
 from app.models.volunteer import VolunteerProfile
+from app.models.voter import Voter, VotingStatus
 from app.schemas.dashboard import (
     AdminDashboardResponse,
     AreaCollectionSummary,
     BoothCollectionSummary,
-    CampaignChannelMetric,
-    ElectionStatsCard,
     ExecutiveOverviewResponse,
     RecentActivityItem,
-    StationTurnoutSummary,
-    VoterTurnoutSummary,
     VolunteerPerformanceSummary,
 )
 

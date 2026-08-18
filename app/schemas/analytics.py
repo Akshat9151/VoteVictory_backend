@@ -1,5 +1,5 @@
-from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
 
 
@@ -21,6 +21,28 @@ class PerformanceDataPoint(BaseModel):
     achievement_percentage: float
 
 
+class WardCoverageItem(BaseModel):
+    ward: str
+    percentage: int
+
+
+class ChannelDeliveryItem(BaseModel):
+    channel: str
+    count: int
+    color: str
+
+
+class MaterialPrintItem(BaseModel):
+    type: str
+    count: int
+
+
+class VolunteerProductivityItem(BaseModel):
+    name: str
+    slips: int
+    calls: int
+
+
 class AnalyticsChartsResponse(BaseModel):
     daily_collection_trend: List[TimeSeriesPoint] = []
     weekly_collection_trend: List[TimeSeriesPoint] = []
@@ -32,3 +54,10 @@ class AnalyticsChartsResponse(BaseModel):
     voter_verification_funnel: Dict[str, int] = {} # registered, verified, checked_in, voted
     communication_delivery_rates: Dict[str, Dict[str, int]] = {} # per-channel: queued, sent, delivered, failed
     election_turnout_by_station: List[Dict[str, Any]] = []
+
+
+class AnalyticsData(BaseModel):
+    wardCoverage: List[WardCoverageItem] = []
+    channelDelivery: List[ChannelDeliveryItem] = []
+    materialPrints: List[MaterialPrintItem] = []
+    volunteerProductivity: List[VolunteerProductivityItem] = []

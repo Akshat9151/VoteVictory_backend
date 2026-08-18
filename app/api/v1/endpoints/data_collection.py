@@ -1,9 +1,10 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, require_permissions
+from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode
 from app.models.data_collection import DuplicateResolutionStatus, SubmissionStatus
 from app.models.user import User

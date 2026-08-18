@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+
 import pytest
 import pytest_asyncio
 
@@ -92,7 +93,6 @@ async def test_org(db_session: AsyncSession) -> Organization:
 async def superadmin_token(db_session: AsyncSession) -> str:
     """Generates a valid Super Admin JWT for seeded admin."""
     from sqlalchemy import select
-    from app.models.user import User
     stmt = select(User).where(User.email == settings.FIRST_SUPER_ADMIN_EMAIL.lower().strip())
     admin = (await db_session.execute(stmt)).scalars().first()
     return create_access_token(
@@ -106,9 +106,10 @@ async def superadmin_token(db_session: AsyncSession) -> str:
 @pytest_asyncio.fixture
 async def admin_token(db_session: AsyncSession, test_org: Organization) -> str:
     """Creates a real Admin user and generates JWT."""
-    from app.core.security import get_password_hash
-    from app.models.user import Role, User, UserRole
     from sqlalchemy import select
+
+    from app.core.security import get_password_hash
+    from app.models.user import Role, UserRole
     user = User(
         organization_id=test_org.id,
         email="orgadmin@apex.org",
@@ -141,9 +142,10 @@ async def admin_token(db_session: AsyncSession, test_org: Organization) -> str:
 @pytest_asyncio.fixture
 async def volunteer_token(db_session: AsyncSession, test_org: Organization) -> str:
     """Creates a Volunteer user and generates JWT with restricted volunteer role."""
-    from app.core.security import get_password_hash
-    from app.models.user import Role, User, UserRole
     from sqlalchemy import select
+
+    from app.core.security import get_password_hash
+    from app.models.user import Role, UserRole
     user = User(
         organization_id=test_org.id,
         email="fieldvolunteer@apex.org",

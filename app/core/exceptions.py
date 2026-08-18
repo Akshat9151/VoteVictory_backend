@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+
 from fastapi import status
 
 
@@ -79,12 +80,13 @@ class PermissionDeniedException(AppException):
 
 
 class ResourceNotFoundException(AppException):
-    def __init__(self, resource_type: str, resource_id: Any):
+    def __init__(self, resource_type: str = "Resource", resource_id: Any = None, message: Optional[str] = None):
+        msg = message or f"{resource_type} with ID '{resource_id}' was not found."
         super().__init__(
             code="RESOURCE_NOT_FOUND",
-            message=f"{resource_type} with ID '{resource_id}' was not found.",
+            message=msg,
             status_code=status.HTTP_404_NOT_FOUND,
-            details={"resource_type": resource_type, "resource_id": str(resource_id)}
+            details={"resource_type": resource_type, "resource_id": str(resource_id) if resource_id else None}
         )
 
 
@@ -156,3 +158,8 @@ class RateLimitExceededException(AppException):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             details={"retry_after_seconds": retry_after_seconds}
         )
+
+
+# Aliases for cross-compatibility
+NotFoundException = ResourceNotFoundException
+ValidationException = BadRequestException

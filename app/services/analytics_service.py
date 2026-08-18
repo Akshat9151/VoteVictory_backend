@@ -1,5 +1,6 @@
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Optional
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -7,9 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.models.area import Area, Booth
 from app.models.data_collection import DataSubmission, SubmissionStatus
 from app.models.notification import NotificationCampaign, NotificationChannel
-from app.models.polling_station import PollingStation
-from app.models.voter import Voter, VoterStatus, VotingStatus
 from app.models.volunteer import VolunteerProfile
+from app.models.voter import Voter, VotingStatus
 from app.schemas.analytics import (
     AnalyticsChartsResponse,
     PerformanceDataPoint,
@@ -34,7 +34,7 @@ class AnalyticsService:
             day_date = now - timedelta(days=i)
             day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            
+
             stmt = select(func.count(DataSubmission.id)).where(
                 DataSubmission.created_at >= day_start,
                 DataSubmission.created_at <= day_end,
@@ -198,8 +198,8 @@ class AnalyticsService:
             voter_stmt = voter_stmt.where(Voter.election_id == election_id)
         all_voters = (await self.db.execute(voter_stmt)).scalars().all()
         total_voters = len(all_voters)
-        checked_in = sum(1 for v in all_voters if v.is_checked_in)
-        voted = sum(1 for v in all_voters if v.voting_status == VotingStatus.VOTED)
+        checked_in = sum(1 for v in all_voters if getattr(v, "is_checked_in", False) or v.voting_status in [VotingStatus.CHECKED_IN, VotingStatus.VOTED])
+        voted = sum(1 for v in all_voters if getattr(v, "has_voted", False) or v.voting_status == VotingStatus.VOTED)
 
         voter_funnel = {
             "registered": total_voters,

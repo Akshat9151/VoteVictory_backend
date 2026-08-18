@@ -3,7 +3,9 @@ import hmac
 import logging
 import uuid
 from typing import Any, Dict, Optional
+
 import httpx
+
 from app.adapters.base import NotificationProvider, ProviderSendResult
 from app.core.config import settings
 
@@ -37,7 +39,7 @@ class InstagramProviderAdapter(NotificationProvider):
                 raw_response={"recipient_id": recipient_ig_id, "message_id": msg_id}
             )
 
-        url = f"https://graph.facebook.com/v20.0/me/messages"
+        url = "https://graph.facebook.com/v20.0/me/messages"
         headers = {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"

@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,15 +10,12 @@ from app.models.user import User
 from app.schemas.area import (
     AreaCreate,
     AreaOut,
-    AreaUpdate,
     BoothCreate,
     BoothOut,
     BoothStatsOut,
-    BoothUpdate,
     MapMetricsOut,
     WardCreate,
     WardOut,
-    WardUpdate,
 )
 from app.schemas.common import APIResponse
 from app.services.area_booth_service import AreaBoothService

@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -19,12 +21,12 @@ class Result(BaseModel):
     position_id = Column(String(36), ForeignKey("positions.id", ondelete="CASCADE"), nullable=False, index=True)
     candidate_id = Column(String(36), ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False, index=True)
     polling_station_id = Column(String(36), ForeignKey("polling_stations.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     vote_count = Column(Integer, default=0, nullable=False)
     vote_percentage = Column(Float, default=0.0, nullable=False)
     rank = Column(Integer, default=0, nullable=False)
     status = Column(Enum(ResultStatus), default=ResultStatus.NOT_STARTED, nullable=False)
-    
+
     counted_at = Column(DateTime(timezone=True), nullable=True)
     approved_by = Column(String(36), nullable=True)
     published_at = Column(DateTime(timezone=True), nullable=True)
@@ -43,7 +45,7 @@ class ResultSummary(BaseModel):
     total_votes_cast = Column(Integer, default=0, nullable=False)
     total_invalid_ballots = Column(Integer, default=0, nullable=False)
     turnout_percentage = Column(Float, default=0.0, nullable=False)
-    
+
     status = Column(Enum(ResultStatus), default=ResultStatus.NOT_STARTED, nullable=False)
     approved_by = Column(String(36), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)

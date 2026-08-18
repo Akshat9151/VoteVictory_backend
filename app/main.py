@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     """Application startup & shutdown lifecycle events."""
     logger.info(f"Starting {settings.PROJECT_NAME} (Environment: {settings.ENVIRONMENT})...")
 
-    # 1. Initialize Tables in Development (if using SQLite fallback or initial dev DB)
+    # 1. Initialize PostgreSQL Database Tables & Relations
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "candidates"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "documents"), exist_ok=True)
 
-    logger.info("Application startup completed successfully.")
+    logger.info("Application startup completed successfully with PostgreSQL database.")
     yield
     logger.info("Shutting down application...")
 
@@ -59,35 +59,42 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
-# Register Custom Middleware (Order: Outer to Inner)
+# Register Custom Error Handlers
+register_error_handlers(app)
+
+# Custom Enterprise Middlewares
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(StructuredLoggingMiddleware)
 app.add_middleware(RequestCorrelationIdMiddleware)
 
-# CORS Configuration
+# Cross-Origin Resource Sharing (CORS) Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Request-ID", "X-Process-Time-Ms"]
 )
 
-# Register Centralized Error Handlers
-register_error_handlers(app)
+# Mount Static Uploads (for candidate photos, documents, and exported reports)
+uploads_dir = os.path.abspath(settings.LOCAL_STORAGE_DIR)
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
-# Include API v1 Router
+# Include Core API Router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
-# Mount Local Uploads directory if configured
-if os.path.exists(settings.LOCAL_STORAGE_DIR):
-    app.mount("/uploads", StaticFiles(directory=settings.LOCAL_STORAGE_DIR), name="uploads")
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+@app.get("/", tags=["Root"])
+async def root_status():
+    """Root status endpoint returning service metadata."""
+    return {
+        "project": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+        "database": "PostgreSQL",
+        "docs": "/docs",
+    }

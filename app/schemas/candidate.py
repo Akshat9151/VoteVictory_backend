@@ -52,6 +52,9 @@ class CandidateStatusUpdateRequest(BaseModel):
     rejection_reason: Optional[str] = None
 
 
+CandidateStatusUpdate = CandidateStatusUpdateRequest
+
+
 class CandidateResponse(CandidateBase):
     model_config = ConfigDict(from_attributes=True)
 

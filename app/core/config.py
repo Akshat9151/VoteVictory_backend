@@ -30,9 +30,9 @@ class Settings(BaseSettings):
         "*"
     ]
 
-    # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./voting_dev.db" # Default fallback for local testing without full pg server, or override via env
-    DATABASE_SYNC_URL: str = "sqlite:///./voting_dev.db"
+    # PostgreSQL Relational Database (asyncpg for Async, psycopg2 for Sync/Workers)
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/voting_db"
+    DATABASE_SYNC_URL: str = "postgresql://postgres:postgres@localhost:5432/voting_db"
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30

@@ -20,6 +20,9 @@ class PositionResultResponse(BaseModel):
     candidates: List[CandidateResultItem] = []
 
 
+ResultResponse = PositionResultResponse
+
+
 class ElectionResultSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +39,12 @@ class ElectionResultSummaryResponse(BaseModel):
     published_at: Optional[datetime] = None
 
 
+ResultSummaryResponse = ElectionResultSummaryResponse
+
+
 class ResultPublishRequest(BaseModel):
     election_id: str
     notes: Optional[str] = None
+
+
+ResultCertificationRequest = ResultPublishRequest

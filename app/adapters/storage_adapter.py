@@ -40,3 +40,6 @@ class StorageAdapter:
             await f.write(content)
 
         return f"/uploads/{subfolder}/{unique_name}"
+
+
+LocalStorageAdapter = StorageAdapter

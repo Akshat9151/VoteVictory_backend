@@ -1,12 +1,16 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
+    alerts,
     analytics,
     audit_logs,
     auth,
+    banners,
+    booths,
     candidates,
     checkin,
     constituencies,
     dashboard,
+    data_collection,
     elections,
     health,
     imports,
@@ -14,7 +18,9 @@ from app.api.v1.endpoints import (
     organizations,
     polling_stations,
     positions,
+    reports,
     results,
+    templates,
     users,
     volunteers,
     voters,
@@ -31,16 +37,22 @@ api_router.include_router(organizations.router)
 api_router.include_router(elections.router)
 api_router.include_router(positions.router)
 api_router.include_router(constituencies.router)
+api_router.include_router(booths.router)
 api_router.include_router(candidates.router)
 api_router.include_router(voters.router)
 api_router.include_router(imports.router)
 api_router.include_router(polling_stations.router)
 api_router.include_router(volunteers.router)
+api_router.include_router(data_collection.router)
 api_router.include_router(checkin.router)
 api_router.include_router(voting.router)
 api_router.include_router(results.router)
+api_router.include_router(templates.router)
+api_router.include_router(banners.router)
 api_router.include_router(notifications.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(analytics.router)
+api_router.include_router(reports.router)
+api_router.include_router(alerts.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(webhooks.router)

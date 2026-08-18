@@ -17,6 +17,27 @@ class TokenResponse(BaseModel):
     user: Dict[str, Any]
 
 
+LoginResponse = TokenResponse
+
+
+class TokenPayload(BaseModel):
+    sub: str
+    org_id: Optional[str] = None
+    email: str
+    roles: List[str] = []
+    permissions: List[str] = []
+    exp: int
+
+
+class UserRegisterRequest(BaseModel):
+    organization_id: Optional[str] = None
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 

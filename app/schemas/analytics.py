@@ -1,34 +1,34 @@
-from typing import List
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 
-class HourlyTurnoutItem(BaseModel):
-    hour: str # e.g. "08:00", "09:00"
-    voter_count: int
-    cumulative_percentage: float
+class TimeSeriesPoint(BaseModel):
+    timestamp: str # e.g. "2026-08-18" or "10:00"
+    label: str
+    value: int
+    target: Optional[int] = None
 
 
-class StationTurnoutItem(BaseModel):
-    station_id: str
-    station_name: str
-    registered_voters: int
-    votes_cast: int
-    turnout_percentage: float
+class PerformanceDataPoint(BaseModel):
+    id: str
+    name: str
+    target: int
+    collected: int
+    approved: int
+    rejected: int
+    duplicate: int
+    achievement_percentage: float
 
 
-class ConstituencyTurnoutItem(BaseModel):
-    constituency_id: str
-    constituency_name: str
-    registered_voters: int
-    votes_cast: int
-    turnout_percentage: float
-
-
-class TurnoutAnalyticsResponse(BaseModel):
-    election_id: str
-    total_registered_voters: int
-    total_votes_cast: int
-    overall_turnout_percentage: float
-    hourly_trends: List[HourlyTurnoutItem] = []
-    station_breakdown: List[StationTurnoutItem] = []
-    constituency_breakdown: List[ConstituencyTurnoutItem] = []
+class AnalyticsChartsResponse(BaseModel):
+    daily_collection_trend: List[TimeSeriesPoint] = []
+    weekly_collection_trend: List[TimeSeriesPoint] = []
+    monthly_collection_trend: List[TimeSeriesPoint] = []
+    volunteer_performance: List[PerformanceDataPoint] = []
+    area_performance: List[PerformanceDataPoint] = []
+    booth_performance: List[PerformanceDataPoint] = []
+    data_quality_distribution: Dict[str, int] = {} # valid, invalid, duplicate, incomplete, rejected
+    voter_verification_funnel: Dict[str, int] = {} # registered, verified, checked_in, voted
+    communication_delivery_rates: Dict[str, Dict[str, int]] = {} # per-channel: queued, sent, delivered, failed
+    election_turnout_by_station: List[Dict[str, Any]] = []

@@ -8,9 +8,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Override configuration for test database
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["DATABASE_SYNC_URL"] = "sqlite:///:memory:"
+# Override configuration for test runtime
+test_db_url = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ["DATABASE_URL"] = test_db_url
 os.environ["SECRET_KEY"] = "test-secret-key-32-chars-length-secure-hash!"
 os.environ["ENVIRONMENT"] = "testing"
 
@@ -23,11 +23,11 @@ from app.models.organization import Organization, OrganizationStatus
 from app.models.user import RoleCode, User
 
 # Test Async Engine
-test_engine = create_async_engine(
-    "sqlite+aiosqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    future=True
-)
+engine_kwargs = {"future": True}
+if "sqlite" in test_db_url:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+test_engine = create_async_engine(test_db_url, **engine_kwargs)
 TestSessionLocal = async_sessionmaker(
     bind=test_engine,
     class_=AsyncSession,
@@ -47,7 +47,7 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session():
-    """Creates a fresh in-memory database schema and session per test."""
+    """Creates a fresh test database schema and session per test."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -122,32 +122,34 @@ async def admin_token(db_session: AsyncSession, test_org: Organization) -> str:
     db_session.add(user)
     await db_session.flush()
 
-    role_stmt = select(Role).where(Role.code == RoleCode.ADMIN.value)
-    role = (await db_session.execute(role_stmt)).scalars().first()
-    if role:
-        db_session.add(UserRole(user_id=user.id, role_id=role.id))
+    role_stmt = select(Role).where(Role.code == RoleCode.ADMIN)
+    admin_role = (await db_session.execute(role_stmt)).scalars().first()
+    if admin_role:
+        db_session.add(UserRole(user_id=user.id, role_id=admin_role.id))
+
     await db_session.commit()
+    await db_session.refresh(user)
 
     return create_access_token(
         subject=user.id,
         organization_id=test_org.id,
         role=RoleCode.ADMIN.value,
-        permissions=["organization.view", "election.create", "election.view", "election.update", "voter.create", "voter.view", "voter.checkin", "result.view", "dashboard.view"]
+        permissions=["election.manage", "voter.manage", "candidate.manage", "result.view", "report.export"]
     )
 
 
 @pytest_asyncio.fixture
 async def volunteer_token(db_session: AsyncSession, test_org: Organization) -> str:
-    """Creates a real Volunteer user and generates JWT."""
+    """Creates a Volunteer user and generates JWT with restricted volunteer role."""
     from app.core.security import get_password_hash
     from app.models.user import Role, User, UserRole
     from sqlalchemy import select
     user = User(
         organization_id=test_org.id,
-        email="volunteer@apex.org",
+        email="fieldvolunteer@apex.org",
         first_name="Field",
         last_name="Volunteer",
-        password_hash=get_password_hash("VolPass123!"),
+        password_hash=get_password_hash("VolunteerPass123!"),
         is_active=True,
         is_verified=True,
         is_superuser=False
@@ -155,15 +157,17 @@ async def volunteer_token(db_session: AsyncSession, test_org: Organization) -> s
     db_session.add(user)
     await db_session.flush()
 
-    role_stmt = select(Role).where(Role.code == RoleCode.VOLUNTEER.value)
-    role = (await db_session.execute(role_stmt)).scalars().first()
-    if role:
-        db_session.add(UserRole(user_id=user.id, role_id=role.id))
+    role_stmt = select(Role).where(Role.code == RoleCode.VOLUNTEER)
+    vol_role = (await db_session.execute(role_stmt)).scalars().first()
+    if vol_role:
+        db_session.add(UserRole(user_id=user.id, role_id=vol_role.id))
+
     await db_session.commit()
+    await db_session.refresh(user)
 
     return create_access_token(
         subject=user.id,
         organization_id=test_org.id,
         role=RoleCode.VOLUNTEER.value,
-        permissions=["election.view", "station.view", "voter.view", "voter.checkin", "dashboard.view"]
+        permissions=["field.data.collect", "field.data.view", "voter.verify"]
     )

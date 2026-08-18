@@ -38,10 +38,21 @@ class SecurityEventResponse(BaseModel):
     created_at: datetime
 
 
-class AuditLogFilterParams(BaseModel):
+class AuditLogFilter(BaseModel):
     action: Optional[str] = None
     resource_type: Optional[str] = None
     actor_user_id: Optional[str] = None
     is_success: Optional[bool] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+
+
+AuditLogFilterParams = AuditLogFilter
+
+
+class SecurityEventFilter(BaseModel):
+    event_type: Optional[str] = None
+    severity: Optional[SecuritySeverity] = None
+    user_id: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None

@@ -13,6 +13,9 @@ class ImportErrorDetail(BaseModel):
     error_reason: str
 
 
+ImportErrorResponse = ImportErrorDetail
+
+
 class ImportJobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,9 +43,15 @@ class ImportPreviewResponse(BaseModel):
     errors_sample: List[ImportErrorDetail] = []
 
 
+ImportUploadResponse = ImportPreviewResponse
+
+
 class ImportConfirmRequest(BaseModel):
     job_id: str
     skip_duplicates: bool = True
+
+
+ImportCommitRequest = ImportConfirmRequest
 
 
 class ImportReportResponse(BaseModel):

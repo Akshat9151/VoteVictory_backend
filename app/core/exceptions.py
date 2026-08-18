@@ -18,6 +18,26 @@ class AppException(Exception):
         self.details = details or {}
 
 
+class BadRequestException(AppException):
+    def __init__(self, message: str = "Invalid request payload.", details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            code="BAD_REQUEST",
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+        )
+
+
+class ConflictException(AppException):
+    def __init__(self, message: str = "Resource conflict.", details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            code="RESOURCE_CONFLICT",
+            message=message,
+            status_code=status.HTTP_409_CONFLICT,
+            details=details,
+        )
+
+
 class AuthenticationException(AppException):
     def __init__(self, message: str = "Invalid credentials or unauthenticated request.", details: Optional[Dict[str, Any]] = None):
         super().__init__(

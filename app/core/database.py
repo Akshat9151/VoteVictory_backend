@@ -10,12 +10,11 @@ logger = logging.getLogger("app.database")
 # Declarative Base for all SQLAlchemy models
 Base = declarative_base()
 
-# Async Engine for FastAPI endpoints
+# Async Engine for FastAPI endpoints (Exclusively PostgreSQL with asyncpg)
 async_engine_kwargs = {
     "echo": settings.DEBUG and settings.ENVIRONMENT == "development",
     "future": True,
 }
-
 if "sqlite" not in settings.DATABASE_URL:
     async_engine_kwargs.update({
         "pool_size": settings.DB_POOL_SIZE,
@@ -34,7 +33,7 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-# Sync Engine for Background Workers & Migrations
+# Sync Engine for Background Workers, Celery, and Migrations (Exclusively PostgreSQL with psycopg2)
 sync_engine_kwargs = {
     "echo": False,
     "future": True,
@@ -51,7 +50,7 @@ SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_eng
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency that provides an async database session per request."""
+    """Dependency that provides an async PostgreSQL database session per request."""
     async with AsyncSessionLocal() as session:
         try:
             yield session

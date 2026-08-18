@@ -1,14 +1,16 @@
-from app.adapters.base import NotificationProvider, ProviderSendResult
-from app.adapters.sms_adapter import SMSProviderAdapter
-from app.adapters.whatsapp_adapter import WhatsAppProviderAdapter
+from app.adapters.base import NotificationDeliveryResult, NotificationProviderAdapter
+from app.adapters.email_adapter import EmailProviderAdapter
 from app.adapters.instagram_adapter import InstagramProviderAdapter
-from app.adapters.storage_adapter import StorageAdapter
+from app.adapters.sms_adapter import SMSProviderAdapter
+from app.adapters.storage_adapter import LocalStorageAdapter
+from app.adapters.whatsapp_adapter import WhatsAppProviderAdapter
 
 __all__ = [
-    "NotificationProvider",
-    "ProviderSendResult",
+    "NotificationDeliveryResult",
+    "NotificationProviderAdapter",
+    "EmailProviderAdapter",
     "SMSProviderAdapter",
     "WhatsAppProviderAdapter",
     "InstagramProviderAdapter",
-    "StorageAdapter",
+    "LocalStorageAdapter",
 ]

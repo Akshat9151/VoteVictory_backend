@@ -4,6 +4,27 @@ from app.models.user import Permission, Role, RolePermission, User, UserRole, Us
 from app.models.election import Election, ElectionSetting, Constituency, Position, ElectionStatus, ElectionType, ElectionVisibility
 from app.models.candidate import Candidate, CandidateDocument, CandidateStatus
 from app.models.polling_station import PollingStation, VolunteerAssignment, PollingStationStatus
+from app.models.area import Ward, Booth, Area, MapStatus, BoothStatus
+from app.models.volunteer import (
+    VolunteerProfile,
+    VolunteerTarget,
+    VolunteerTask,
+    VolunteerActivity,
+    VolunteerStatus,
+    TaskPriority,
+    TaskStatus,
+    ActivityType,
+)
+from app.models.data_collection import (
+    DataSubmission,
+    DataQualityCheck,
+    DataDuplicate,
+    DataReview,
+    SubmissionStatus,
+    DuplicateSignal,
+    DuplicateResolutionStatus,
+    ReviewAction,
+)
 from app.models.voter import Voter, VoterVerification, VoterCheckin, VoterStatus, VotingStatus
 from app.models.voting import VotingSession, Ballot, Vote, VotingSessionStatus
 from app.models.result import Result, ResultSummary, ResultStatus
@@ -16,6 +37,8 @@ from app.models.notification import (
     CampaignStatus,
     DeliveryStatus,
 )
+from app.models.banner import Banner, BannerStatus
+from app.models.alert import OperationalAlert, OperationalAlertType, AlertSeverity
 from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
 from app.models.import_job import ImportJob, ImportError, ImportStatus
 from app.models.webhook import WebhookEvent, SystemSetting, FileAsset
@@ -44,6 +67,27 @@ __all__ = [
     "PollingStation",
     "VolunteerAssignment",
     "PollingStationStatus",
+    "Ward",
+    "Booth",
+    "Area",
+    "MapStatus",
+    "BoothStatus",
+    "VolunteerProfile",
+    "VolunteerTarget",
+    "VolunteerTask",
+    "VolunteerActivity",
+    "VolunteerStatus",
+    "TaskPriority",
+    "TaskStatus",
+    "ActivityType",
+    "DataSubmission",
+    "DataQualityCheck",
+    "DataDuplicate",
+    "DataReview",
+    "SubmissionStatus",
+    "DuplicateSignal",
+    "DuplicateResolutionStatus",
+    "ReviewAction",
     "Voter",
     "VoterVerification",
     "VoterCheckin",
@@ -63,6 +107,11 @@ __all__ = [
     "NotificationChannel",
     "CampaignStatus",
     "DeliveryStatus",
+    "Banner",
+    "BannerStatus",
+    "OperationalAlert",
+    "OperationalAlertType",
+    "AlertSeverity",
     "AuditLog",
     "SecurityEvent",
     "SecuritySeverity",

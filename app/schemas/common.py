@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
@@ -26,7 +26,11 @@ class PaginationMeta(BaseModel):
 
 class PaginatedResponse(BaseModel, Generic[T]):
     items: List[T]
-    pagination: PaginationMeta
+    total: Optional[int] = None
+    page: Optional[int] = None
+    page_size: Optional[int] = None
+    total_pages: Optional[int] = None
+    pagination: Optional[PaginationMeta] = None
 
 
 class PaginationParams(BaseModel):
@@ -35,3 +39,22 @@ class PaginationParams(BaseModel):
     sort_by: Optional[str] = None
     sort_desc: bool = False
     search: Optional[str] = None
+
+
+class ErrorDetail(BaseModel):
+    field: Optional[str] = None
+    message: str
+
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    error_code: str
+    message: str
+    details: Optional[List[ErrorDetail]] = None
+    request_id: Optional[str] = None
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class MessageResponse(BaseModel):
+    success: bool = True
+    message: str

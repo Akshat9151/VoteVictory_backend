@@ -9,6 +9,9 @@ class VotingAuthRequest(BaseModel):
     verification_code: Optional[str] = Field(None, description="OTP or pass-code if configured")
 
 
+VotingSessionInitiate = VotingAuthRequest
+
+
 class BallotCandidateOption(BaseModel):
     candidate_id: str
     full_name: str
@@ -37,6 +40,9 @@ class BallotGenerateResponse(BaseModel):
     positions: List[BallotPosition] = []
 
 
+VotingSessionResponse = BallotGenerateResponse
+
+
 class VoteSelection(BaseModel):
     position_id: str
     candidate_ids: List[str] = Field(..., description="List of chosen candidate IDs for this position")
@@ -48,8 +54,15 @@ class VoteSubmissionRequest(BaseModel):
     selections: List[VoteSelection]
 
 
+CastVoteRequest = VoteSubmissionRequest
+
+
 class VoteReceiptResponse(BaseModel):
     success: bool = True
     ballot_serial_hash: str
     cast_timestamp: str
     message: str = "Ballot successfully anonymized and cast in database."
+
+
+CastVoteResponse = VoteReceiptResponse
+BallotAuditReceipt = VoteReceiptResponse

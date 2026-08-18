@@ -25,6 +25,21 @@ class UserUpdate(BaseModel):
     organization_id: Optional[str] = None
 
 
+class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class UserPasswordChange(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
+
+
 class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 

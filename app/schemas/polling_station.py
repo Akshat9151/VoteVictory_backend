@@ -32,6 +32,10 @@ class PollingStationUpdate(BaseModel):
     constituency_id: Optional[str] = None
 
 
+class PollingStationStatusUpdate(BaseModel):
+    status: PollingStationStatus
+
+
 class PollingStationResponse(PollingStationBase):
     model_config = ConfigDict(from_attributes=True)
 

@@ -37,6 +37,8 @@ class PermissionCode(str, enum.Enum):
     ELECTION_CANCEL = "election.cancel"
     POSITION_MANAGE = "position.manage"
     CONSTITUENCY_MANAGE = "constituency.manage"
+    BOOTH_MANAGE = "booth.manage"
+    AREA_MANAGE = "area.manage"
 
     # Candidates
     CANDIDATE_CREATE = "candidate.create"
@@ -57,8 +59,19 @@ class PermissionCode(str, enum.Enum):
     # Polling & Volunteers
     STATION_MANAGE = "station.manage"
     STATION_VIEW = "station.view"
+    VOLUNTEER_MANAGE = "volunteer.manage"
     VOLUNTEER_ASSIGN = "volunteer.assign"
     VOLUNTEER_VIEW = "volunteer.view"
+
+    # Field Data Collection & Review
+    DATA_SUBMIT = "data.submit"
+    DATA_VIEW = "data.view"
+    DATA_REVIEW = "data.review"
+    DATA_EXPORT = "data.export"
+
+    # Content & Creatives
+    TEMPLATE_MANAGE = "template.manage"
+    BANNER_MANAGE = "banner.manage"
 
     # Voting Engine & Ballots
     VOTE_SESSION_ISSUE = "vote.session_issue"
@@ -75,9 +88,10 @@ class PermissionCode(str, enum.Enum):
     NOTIFICATION_MANAGE = "notification.manage"
     NOTIFICATION_VIEW = "notification.view"
 
-    # Reports & Dashboards
+    # Reports, Alerts & Dashboards
     DASHBOARD_VIEW = "dashboard.view"
     REPORT_GENERATE = "report.generate"
+    ALERT_MANAGE = "alert.manage"
 
 
 # Default Role Permission Mappings
@@ -104,6 +118,8 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.ELECTION_CANCEL,
         PermissionCode.POSITION_MANAGE,
         PermissionCode.CONSTITUENCY_MANAGE,
+        PermissionCode.BOOTH_MANAGE,
+        PermissionCode.AREA_MANAGE,
         PermissionCode.CANDIDATE_CREATE,
         PermissionCode.CANDIDATE_VIEW,
         PermissionCode.CANDIDATE_UPDATE,
@@ -118,8 +134,15 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.VOTER_BLOCK,
         PermissionCode.STATION_MANAGE,
         PermissionCode.STATION_VIEW,
+        PermissionCode.VOLUNTEER_MANAGE,
         PermissionCode.VOLUNTEER_ASSIGN,
         PermissionCode.VOLUNTEER_VIEW,
+        PermissionCode.DATA_SUBMIT,
+        PermissionCode.DATA_VIEW,
+        PermissionCode.DATA_REVIEW,
+        PermissionCode.DATA_EXPORT,
+        PermissionCode.TEMPLATE_MANAGE,
+        PermissionCode.BANNER_MANAGE,
         PermissionCode.VOTE_SESSION_ISSUE,
         PermissionCode.VOTE_CAST,
         PermissionCode.RESULT_VIEW,
@@ -131,6 +154,7 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.NOTIFICATION_VIEW,
         PermissionCode.DASHBOARD_VIEW,
         PermissionCode.REPORT_GENERATE,
+        PermissionCode.ALERT_MANAGE,
     ],
     RoleCode.ADMIN: [
         PermissionCode.ORGANIZATION_VIEW,
@@ -146,6 +170,8 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.ELECTION_CLOSE,
         PermissionCode.POSITION_MANAGE,
         PermissionCode.CONSTITUENCY_MANAGE,
+        PermissionCode.BOOTH_MANAGE,
+        PermissionCode.AREA_MANAGE,
         PermissionCode.CANDIDATE_CREATE,
         PermissionCode.CANDIDATE_VIEW,
         PermissionCode.CANDIDATE_UPDATE,
@@ -160,8 +186,15 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.VOTER_BLOCK,
         PermissionCode.STATION_MANAGE,
         PermissionCode.STATION_VIEW,
+        PermissionCode.VOLUNTEER_MANAGE,
         PermissionCode.VOLUNTEER_ASSIGN,
         PermissionCode.VOLUNTEER_VIEW,
+        PermissionCode.DATA_SUBMIT,
+        PermissionCode.DATA_VIEW,
+        PermissionCode.DATA_REVIEW,
+        PermissionCode.DATA_EXPORT,
+        PermissionCode.TEMPLATE_MANAGE,
+        PermissionCode.BANNER_MANAGE,
         PermissionCode.RESULT_VIEW,
         PermissionCode.RESULT_COUNT,
         PermissionCode.RESULT_APPROVE,
@@ -171,6 +204,7 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.NOTIFICATION_VIEW,
         PermissionCode.DASHBOARD_VIEW,
         PermissionCode.REPORT_GENERATE,
+        PermissionCode.ALERT_MANAGE,
         PermissionCode.AUDIT_VIEW,
     ],
     RoleCode.VOLUNTEER: [
@@ -180,6 +214,8 @@ DEFAULT_ROLE_PERMISSIONS: Dict[RoleCode, List[PermissionCode]] = {
         PermissionCode.VOTER_CREATE,
         PermissionCode.VOTER_VERIFY,
         PermissionCode.VOTER_CHECKIN,
+        PermissionCode.VOLUNTEER_VIEW,
+        PermissionCode.DATA_SUBMIT,
         PermissionCode.DASHBOARD_VIEW,
     ],
 }

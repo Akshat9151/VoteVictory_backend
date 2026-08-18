@@ -1,7 +1,8 @@
-from datetime import datetime
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode
@@ -10,10 +11,11 @@ from app.schemas.audit import AuditLogFilterParams, AuditLogResponse, SecurityEv
 from app.schemas.common import APIResponse, PaginatedResponse
 from app.services.audit_service import AuditService
 
-router = APIRouter(prefix="/audit", tags=["Audit & Security Logs"])
+router = APIRouter(tags=["Audit & Security Logs"])
 
 
-@router.get("/logs", response_model=APIResponse[PaginatedResponse[AuditLogResponse]])
+@router.get("/audit-logs", response_model=APIResponse[PaginatedResponse[AuditLogResponse]])
+@router.get("/audit/logs", response_model=APIResponse[PaginatedResponse[AuditLogResponse]])
 async def list_audit_logs(
     action: Optional[str] = None,
     resource_type: Optional[str] = None,
@@ -39,10 +41,11 @@ async def list_audit_logs(
         page=page,
         page_size=page_size
     )
-    items = [AuditLogResponse.model_validate(l) for l in logs]
+    items = [AuditLogResponse.model_validate(log_item) for log_item in logs]
     return APIResponse(data=PaginatedResponse(items=items, pagination=pagination))
 
 
+@router.get("/audit/security-events", response_model=APIResponse[List[SecurityEventResponse]])
 @router.get("/security-events", response_model=APIResponse[List[SecurityEventResponse]])
 async def list_security_events(
     limit: int = Query(50, ge=1, le=100),

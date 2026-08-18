@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -42,7 +44,7 @@ class DataSubmission(BaseModel):
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="SET NULL"), nullable=True, index=True)
     volunteer_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     # Hierarchy mappings
     constituency_id = Column(String(36), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
     ward_id = Column(String(36), nullable=True, index=True)
@@ -91,14 +93,14 @@ class DataQualityCheck(BaseModel):
     __tablename__ = "data_quality_checks"
 
     submission_id = Column(String(36), ForeignKey("data_submissions.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
-    
+
     is_valid_mobile = Column(Boolean, default=True, nullable=False)
     is_valid_email = Column(Boolean, default=True, nullable=False)
     is_valid_voter_card = Column(Boolean, default=True, nullable=False)
     has_required_fields = Column(Boolean, default=True, nullable=False)
     is_area_booth_mismatch = Column(Boolean, default=False, nullable=False)
     is_suspicious_repeated = Column(Boolean, default=False, nullable=False)
-    
+
     quality_percentage = Column(Float, default=100.0, nullable=False)
     validation_issues_json = Column(Text, nullable=True) # list of error strings
 
@@ -115,7 +117,7 @@ class DataDuplicate(BaseModel):
     match_signal = Column(Enum(DuplicateSignal), nullable=False, index=True)
     similarity_score = Column(Float, default=1.0, nullable=False)
     match_reason = Column(String(500), nullable=False)
-    
+
     resolution_status = Column(Enum(DuplicateResolutionStatus), default=DuplicateResolutionStatus.POSSIBLE_DUPLICATE, nullable=False, index=True)
     resolved_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)

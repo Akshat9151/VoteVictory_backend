@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
 
 
@@ -128,12 +129,12 @@ class VolunteerDashboardResponse(BaseModel):
     assigned_booth_number: Optional[str] = None
     assigned_area_name: Optional[str] = None
     task_role: str = "FIELD_VOLUNTEER"
-    
+
     daily_target: int = 200
     daily_collection: int = 0
     achievement_percentage: float = 0.0
     remaining_target: int = 200
-    
+
     total_submissions: int = 0
     approved_count: int = 0
     rejected_count: int = 0

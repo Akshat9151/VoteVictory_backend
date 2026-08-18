@@ -1,7 +1,9 @@
 import math
 from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.base import BaseModel
 from app.schemas.common import PaginationMeta
 
@@ -13,13 +15,31 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.db = db
 
-    async def get_by_id(self, id: str) -> Optional[ModelType]:
+    async def get_by_id(self, id: str, organization_id: Optional[str] = None) -> Optional[ModelType]:
         stmt = select(self.model).where(self.model.id == id)
+        if organization_id and hasattr(self.model, "organization_id"):
+            stmt = stmt.where(self.model.organization_id == organization_id)
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
-    async def list_all(self) -> List[ModelType]:
+    async def list_all(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        organization_id: Optional[str] = None,
+        limit: Optional[int] = None,
+        order_by: Optional[Any] = None
+    ) -> List[ModelType]:
         stmt = select(self.model)
+        if organization_id and hasattr(self.model, "organization_id"):
+            stmt = stmt.where(self.model.organization_id == organization_id)
+        if filters:
+            for field, val in filters.items():
+                if val is not None and hasattr(self.model, field):
+                    stmt = stmt.where(getattr(self.model, field) == val)
+        if order_by is not None:
+            stmt = stmt.order_by(order_by)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 

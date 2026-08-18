@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
+
 from app.core.config import settings
-from app.models.election import ElectionStatus
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,8 @@ async def test_election_and_voter_flow(client: AsyncClient):
         "party_name": "Kisan Vikas Sangh"
     }, headers=headers)
     assert cand_resp.status_code == 200
-    cand_id = cand_resp.json()["data"]["id"]
+    cand_data = cand_resp.json().get("data", cand_resp.json())
+    cand_id = cand_data["id"]
 
     # Approve Candidate
     app_resp = await client.post(f"/api/v1/candidates/{cand_id}/status", json={
@@ -110,7 +111,8 @@ async def test_election_and_voter_flow(client: AsyncClient):
         "phone_number": "+919829012345"
     }, headers=headers)
     assert voter_resp.status_code == 200
-    voter_id = voter_resp.json()["data"]["id"]
+    voter_data = voter_resp.json().get("data", voter_resp.json())
+    voter_id = voter_data["id"]
 
     # 8. Checkin Voter
     checkin_resp = await client.post("/api/v1/checkin/", json={

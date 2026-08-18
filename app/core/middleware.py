@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
@@ -24,10 +25,10 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.perf_counter()
         request_id = getattr(request.state, "request_id", "unknown")
         client_ip = request.client.host if request.client else "unknown"
-        
+
         # Process request
         response = await call_next(request)
-        
+
         process_time_ms = (time.perf_counter() - start_time) * 1000
         response.headers["X-Process-Time-Ms"] = f"{process_time_ms:.2f}"
 

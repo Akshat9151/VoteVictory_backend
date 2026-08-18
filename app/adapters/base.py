@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
+
 from pydantic import BaseModel
 
 
@@ -16,7 +17,7 @@ NotificationDeliveryResult = ProviderSendResult
 
 class NotificationProvider(ABC):
     """Abstract interface for all notification communication adapters."""
-    
+
     @abstractmethod
     async def send_message(
         self,

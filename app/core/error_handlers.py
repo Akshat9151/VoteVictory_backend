@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -55,7 +56,7 @@ def register_error_handlers(app: FastAPI) -> None:
         for err in exc.errors():
             loc = ".".join(str(item) for item in err.get("loc", []))
             details[loc] = err.get("msg", "Invalid value")
-        
+
         logger.warning(f"ValidationError: {details} req_id={getattr(request.state, 'request_id', 'unknown')}")
         return format_error_response(
             code="VALIDATION_ERROR",

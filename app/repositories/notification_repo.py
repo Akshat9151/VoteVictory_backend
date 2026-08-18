@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import Optional
+
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.models.notification import (
-    DeliveryStatus,
     NotificationCampaign,
     NotificationDelivery,
     NotificationRecipient,

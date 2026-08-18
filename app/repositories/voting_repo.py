@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.voting import Ballot, Vote, VotingSession, VotingSessionStatus
 from app.repositories.base import BaseRepository
 

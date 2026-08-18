@@ -1,47 +1,60 @@
+from app.models.alert import AlertSeverity, OperationalAlert, OperationalAlertType
+from app.models.area import Area, Booth, BoothStatus, MapStatus, Ward
+from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
+from app.models.banner import Banner, BannerStatus
 from app.models.base import BaseModel
-from app.models.organization import Organization, OrganizationStatus
-from app.models.user import Permission, Role, RolePermission, User, UserRole, UserSession, RoleCode
-from app.models.election import Election, ElectionSetting, Constituency, Position, ElectionStatus, ElectionType, ElectionVisibility
+from app.models.broadcast import DeliveryLog
 from app.models.candidate import Candidate, CandidateDocument, CandidateStatus
-from app.models.polling_station import PollingStation, VolunteerAssignment, PollingStationStatus
-from app.models.area import Ward, Booth, Area, MapStatus, BoothStatus
-from app.models.volunteer import (
-    VolunteerProfile,
-    VolunteerTarget,
-    VolunteerTask,
-    VolunteerActivity,
-    VolunteerStatus,
-    TaskPriority,
-    TaskStatus,
-    ActivityType,
-)
+from app.models.complaint import Complaint
 from app.models.data_collection import (
-    DataSubmission,
-    DataQualityCheck,
     DataDuplicate,
+    DataQualityCheck,
     DataReview,
-    SubmissionStatus,
-    DuplicateSignal,
+    DataSubmission,
     DuplicateResolutionStatus,
+    DuplicateSignal,
     ReviewAction,
+    SubmissionStatus,
 )
-from app.models.voter import Voter, VoterVerification, VoterCheckin, VoterStatus, VotingStatus
-from app.models.voting import VotingSession, Ballot, Vote, VotingSessionStatus
-from app.models.result import Result, ResultSummary, ResultStatus
+from app.models.election import (
+    Constituency,
+    Election,
+    ElectionSetting,
+    ElectionStatus,
+    ElectionType,
+    ElectionVisibility,
+    Position,
+)
+from app.models.expense import Expense
+from app.models.import_job import ImportError, ImportJob, ImportStatus
 from app.models.notification import (
-    NotificationTemplate,
-    NotificationCampaign,
-    NotificationRecipient,
-    NotificationDelivery,
-    NotificationChannel,
     CampaignStatus,
     DeliveryStatus,
+    NotificationCampaign,
+    NotificationChannel,
+    NotificationDelivery,
+    NotificationRecipient,
+    NotificationTemplate,
 )
-from app.models.banner import Banner, BannerStatus
-from app.models.alert import OperationalAlert, OperationalAlertType, AlertSeverity
-from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
-from app.models.import_job import ImportJob, ImportError, ImportStatus
-from app.models.webhook import WebhookEvent, SystemSetting, FileAsset
+from app.models.organization import Organization, OrganizationStatus
+from app.models.polling_station import PollingStation, PollingStationStatus, VolunteerAssignment
+from app.models.result import Result, ResultStatus, ResultSummary
+from app.models.team import TeamMember, Volunteer
+from app.models.user import Permission, Role, RoleCode, RolePermission, User, UserRole, UserSession
+from app.models.volunteer import (
+    ActivityType,
+    TaskPriority,
+    TaskStatus,
+    VolunteerActivity,
+    VolunteerProfile,
+    VolunteerStatus,
+    VolunteerTarget,
+    VolunteerTask,
+)
+from app.models.volunteer_voter import VolunteerVoter
+from app.models.voter import Voter, VoterCheckin, VoterStatus, VoterVerification, VotingStatus
+from app.models.voting import Ballot, Vote, VotingSession, VotingSessionStatus
+from app.models.webhook import FileAsset, SystemSetting, WebhookEvent
 
 __all__ = [
     "BaseModel",
@@ -80,6 +93,12 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "ActivityType",
+    "TeamMember",
+    "Volunteer",
+    "VolunteerVoter",
+    "Complaint",
+    "Expense",
+    "DeliveryLog",
     "DataSubmission",
     "DataQualityCheck",
     "DataDuplicate",

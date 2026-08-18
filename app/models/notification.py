@@ -1,6 +1,8 @@
 import enum
+
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -54,14 +56,14 @@ class NotificationCampaign(BaseModel):
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="SET NULL"), nullable=True, index=True)
     template_id = Column(String(36), ForeignKey("notification_templates.id", ondelete="RESTRICT"), nullable=False, index=True)
-    
+
     name = Column(String(255), nullable=False)
     channel = Column(Enum(NotificationChannel), default=NotificationChannel.WHATSAPP, nullable=False)
     target_audience_type = Column(String(50), default="ALL_VOTERS", nullable=False) # ALL_VOTERS, ELIGIBLE, NOT_VOTED, CONSTITUENCY, POLLING_STATION, CUSTOM
     audience_filter_json = Column(Text, nullable=True)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(Enum(CampaignStatus), default=CampaignStatus.DRAFT, nullable=False, index=True)
-    
+
     total_recipients = Column(Integer, default=0, nullable=False)
     sent_count = Column(Integer, default=0, nullable=False)
     delivered_count = Column(Integer, default=0, nullable=False)
@@ -78,12 +80,12 @@ class NotificationRecipient(BaseModel):
 
     campaign_id = Column(String(36), ForeignKey("notification_campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     voter_id = Column(String(36), ForeignKey("voters.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     recipient_address = Column(String(255), nullable=False, index=True) # Phone number or IG handle
     recipient_name = Column(String(255), nullable=True)
     personalized_data_json = Column(Text, nullable=True)
     status = Column(Enum(DeliveryStatus), default=DeliveryStatus.PENDING, nullable=False, index=True)
-    
+
     provider_message_id = Column(String(255), nullable=True, index=True)
     retry_count = Column(Integer, default=0, nullable=False)
     error_message = Column(Text, nullable=True)

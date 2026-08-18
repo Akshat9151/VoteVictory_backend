@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
-from app.core.exceptions import AppException
-from app.models.voter import Voter
-from app.repositories.voter_repo import VoterRepository
 from app.schemas.common import APIResponse
 from app.schemas.voting import (
     BallotGenerateResponse,

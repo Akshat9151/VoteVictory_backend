@@ -1,9 +1,11 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from app.api.v1.router import api_router
 from app.core.bootstrap import seed_system_data
 from app.core.config import settings

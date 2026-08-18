@@ -1,14 +1,24 @@
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import Any, List, Optional, Tuple
+
 from fastapi import Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
-from app.core.exceptions import DuplicateResourceException, PermissionDeniedException, ResourceNotFoundException
+from app.core.exceptions import ResourceNotFoundException
 from app.models.user import User
 from app.models.voter import Voter, VoterStatus, VoterVerification, VotingStatus
 from app.repositories.voter_repo import VoterRepository
 from app.schemas.common import PaginationMeta
-from app.schemas.voter import VoterCreate, VoterFilterParams, VoterUpdate, VoterVerificationRequest, VoterVerificationResponse
+from app.schemas.voter import (
+    AudienceSplit,
+    VoterCreate,
+    VoterFilterParams,
+    VoterUpdate,
+    VoterVerificationRequest,
+    VoterVerificationResponse,
+)
 
 
 class VoterService:
@@ -16,54 +26,115 @@ class VoterService:
         self.db = db
         self.voter_repo = VoterRepository(db)
 
-    async def create_voter(self, request: Request, voter_in: VoterCreate, current_user: User) -> Voter:
-        # Check duplicate EPIC in this election
-        existing = await self.voter_repo.get_by_voter_id_number(voter_in.election_id, voter_in.voter_id_number)
-        if existing:
-            raise DuplicateResourceException("Voter", "voter_id_number", voter_in.voter_id_number)
+    async def list_org_voters(self, organization_id: Optional[str] = None) -> List[Voter]:
+        stmt = select(Voter)
+        if organization_id:
+            stmt = stmt.where(Voter.organization_id == organization_id)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
 
-        org_id = current_user.organization_id
-        if not org_id:
-            from app.models.election import Election
-            elec = await self.db.get(Election, voter_in.election_id)
-            if elec:
-                org_id = elec.organization_id
+    async def get_audience_split(self, organization_id: Optional[str] = None) -> AudienceSplit:
+        voters = await self.list_org_voters(organization_id)
+        if not voters:
+            voters = await self.list_org_voters(None)
+
+        total = len(voters)
+        whatsapp = sum(1 for v in voters if v.channel == "WhatsApp" and v.mobile)
+        sms = sum(1 for v in voters if v.channel != "WhatsApp" or not v.mobile)
+        denom = total if total > 0 else 1
+        return AudienceSplit(
+            total=total,
+            whatsapp=whatsapp,
+            sms=sms,
+            whatsappPercent=round((whatsapp / denom) * 100),
+            smsPercent=round((sms / denom) * 100)
+        )
+
+    async def add_voter(self, voter_in: Any, organization_id: Optional[str] = None) -> Voter:
+        v_in = voter_in if isinstance(voter_in, VoterCreate) else VoterCreate(**voter_in)
+        return await self.create_voter(request=None, voter_in=v_in, current_user=None)
+
+    async def add_voters_batch(self, voters_in: List[Any], organization_id: Optional[str] = None) -> List[Voter]:
+        created: List[Voter] = []
+        for raw in voters_in:
+            raw_id = raw.get("id") or raw.get("voter_id_number") if isinstance(raw, dict) else (getattr(raw, "id", None) or getattr(raw, "voter_id_number", None))
+            v_in = VoterCreate(**raw) if isinstance(raw, dict) else raw
+            if raw_id:
+                setattr(v_in, "id", raw_id)
+                setattr(v_in, "voter_id_number", raw_id)
+                stmt = select(Voter).where((Voter.id == raw_id) | (Voter.voter_id_number == raw_id))
+                existing = (await self.db.execute(stmt)).scalars().first()
+                if existing:
+                    from app.core.exceptions import ConflictException
+                    raise ConflictException(f"Duplicate voter ID '{raw_id}' already exists.")
+            voter = await self.create_voter(request=None, voter_in=v_in, current_user=None)
+            created.append(voter)
+        return created
+
+    async def create_voter(self, request: Optional[Request], voter_in: VoterCreate, current_user: Optional[User] = None) -> Voter:
+        org_id = current_user.organization_id if current_user else "default_org"
+        voter_name = voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}".strip() or "Voter"
+        voter_id_num = getattr(voter_in, "id", None) or voter_in.voter_id_number
+
+        if voter_id_num:
+            stmt = select(Voter).where((Voter.id == voter_id_num) | (Voter.voter_id_number == voter_id_num))
+            existing = (await self.db.execute(stmt)).scalars().first()
+            if existing:
+                from app.core.exceptions import ConflictException
+                raise ConflictException(f"Duplicate voter ID '{voter_id_num}' already exists.")
+        else:
+            voter_id_num = f"V-{voter_in.ward or '01'}-{int(datetime.now().timestamp()) % 10000}"
 
         voter = Voter(
+            id=voter_id_num,
             organization_id=org_id,
             election_id=voter_in.election_id,
             constituency_id=voter_in.constituency_id,
             polling_station_id=voter_in.polling_station_id,
-            voter_id_number=voter_in.voter_id_number.strip().upper(),
-            first_name=voter_in.first_name.strip(),
-            last_name=voter_in.last_name.strip(),
+            name=voter_name,
+            voter_id_number=voter_id_num,
+            first_name=voter_in.first_name or voter_name.split()[0],
+            last_name=voter_in.last_name or (" ".join(voter_name.split()[1:]) if len(voter_name.split()) > 1 else ""),
             father_or_spouse_name=voter_in.father_or_spouse_name,
             date_of_birth=voter_in.date_of_birth,
-            age=voter_in.age,
-            gender=voter_in.gender,
-            phone_number=voter_in.phone_number,
+            age=voter_in.age or 35,
+            gender=voter_in.gender or "Male",
+            mobile=voter_in.mobile or voter_in.phone_number or "",
+            phone_number=voter_in.phone_number or voter_in.mobile or "",
             email=voter_in.email,
-            address=voter_in.address,
-            house_number=voter_in.house_number,
-            ward_name=voter_in.ward_name,
-            notes=voter_in.notes,
-            status=VoterStatus.REGISTERED,
+            address=voter_in.address or voter_in.house or "",
+            house_number=voter_in.house_number or voter_in.house or "",
+            ward=voter_in.ward or voter_in.ward_name or "Ward 01",
+            ward_name=voter_in.ward_name or voter_in.ward or "Ward 01",
+            channel=voter_in.channel or "WhatsApp",
+            consent=voter_in.consent or "Verified",
+            source=voter_in.source or "Official Roll",
+            status=voter_in.status or "Valid",
             voting_status=VotingStatus.NOT_VOTED,
-            has_voted=False
+            has_voted=False,
+            notes=voter_in.notes
         )
         voter = await self.voter_repo.create(voter)
 
-        await record_audit_log(
-            self.db,
-            request,
-            action="voter.create",
-            resource_type="voter",
-            resource_id=voter.id,
-            current_user=current_user,
-            organization_id=org_id,
-            new_state={"voter_id_number": voter.voter_id_number, "election_id": voter.election_id}
-        )
+        if current_user and request:
+            await record_audit_log(
+                self.db,
+                request,
+                action="voter.create",
+                resource_type="voter",
+                resource_id=voter.id,
+                current_user=current_user,
+                organization_id=org_id,
+                new_state={"voter_id_number": voter.voter_id_number, "name": voter.name}
+            )
         return voter
+
+    async def create_batch(self, request: Optional[Request], voters_in: List[VoterCreate], current_user: Optional[User] = None) -> List[Voter]:
+        created: List[Voter] = []
+        for idx, v_in in enumerate(voters_in):
+            voter = await self.create_voter(request, v_in, current_user)
+            created.append(voter)
+        return created
 
     async def list_voters(
         self,
@@ -75,7 +146,7 @@ class VoterService:
         assigned_station_id: Optional[str] = None
     ) -> Tuple[List[Voter], PaginationMeta]:
         stmt_filters = {"election_id": election_id}
-        
+
         # Station restriction for volunteer
         if assigned_station_id:
             stmt_filters["polling_station_id"] = assigned_station_id
@@ -164,7 +235,7 @@ class VoterService:
         current_user: User
     ) -> VoterVerificationResponse:
         voter = await self.get_voter(voter_id)
-        
+
         verification = VoterVerification(
             voter_id=voter.id,
             verification_method=verify_in.verification_method,
@@ -174,7 +245,7 @@ class VoterService:
             id_document_number=verify_in.id_document_number
         )
         self.db.add(verification)
-        
+
         voter.status = VoterStatus.VERIFIED
         await self.voter_repo.update(voter)
 

@@ -1,14 +1,14 @@
 import csv
 import io
-from typing import Any, Dict, List, Optional
-from sqlalchemy import func, select
+from typing import Any, List, Optional
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.data_collection import DataSubmission
 from app.models.election import Election
 from app.models.notification import NotificationCampaign
-from app.models.voter import Voter
 from app.models.volunteer import VolunteerProfile
 from app.schemas.report import (
     CampaignReportRow,

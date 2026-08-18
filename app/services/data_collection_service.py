@@ -2,13 +2,14 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+
 from fastapi import Request
-from sqlalchemy import func, or_, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.audit import record_audit_log
-from app.core.exceptions import BadRequestException, ResourceNotFoundException
+from app.core.exceptions import ResourceNotFoundException
 from app.models.data_collection import (
     DataQualityCheck,
     DataReview,
@@ -26,7 +27,6 @@ from app.schemas.data_collection import (
     DataReviewRequest,
     DataSubmissionCreate,
     DataSubmissionOut,
-    DataSubmissionUpdate,
 )
 from app.services.duplicate_detection_service import DuplicateDetectionService
 
@@ -331,7 +331,7 @@ class DataCollectionService:
         rejected = sum(1 for s in results if s.status == SubmissionStatus.REJECTED)
         duplicates = sum(1 for s in results if s.status == SubmissionStatus.DUPLICATE or s.is_flagged_duplicate)
         pending = sum(1 for s in results if s.status in [SubmissionStatus.SUBMITTED, SubmissionStatus.UNDER_REVIEW])
-        
+
         valid = sum(1 for s in results if s.quality_score >= 80.0)
         invalid = sum(1 for s in results if s.quality_score < 50.0)
         incomplete = sum(1 for s in results if not s.mobile or not s.voter_card_number)

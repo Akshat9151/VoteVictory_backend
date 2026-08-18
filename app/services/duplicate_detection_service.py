@@ -1,13 +1,13 @@
-import json
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from fastapi import Request
-from sqlalchemy import func, or_, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.audit import record_audit_log
-from app.core.exceptions import BadRequestException, ResourceNotFoundException
+from app.core.exceptions import ResourceNotFoundException
 from app.models.data_collection import (
     DataDuplicate,
     DataSubmission,

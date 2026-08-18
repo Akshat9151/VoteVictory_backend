@@ -1,6 +1,8 @@
 from typing import List, Optional, Tuple
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import DuplicateResourceException, PermissionDeniedException, ResourceNotFoundException
 from app.core.permissions import RoleCode
@@ -8,7 +10,7 @@ from app.core.security import get_password_hash
 from app.models.user import Permission, Role, User, UserRole
 from app.repositories.user_repo import UserRepository
 from app.schemas.common import PaginationMeta
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate
 
 
 class UserService:

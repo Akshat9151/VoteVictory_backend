@@ -1,5 +1,5 @@
 import enum
-from typing import Dict, List, Set
+from typing import Dict, List
 
 
 class RoleCode(str, enum.Enum):
@@ -14,12 +14,12 @@ class PermissionCode(str, enum.Enum):
     SYSTEM_MANAGE = "system.manage"
     AUDIT_VIEW = "audit.view"
     SECURITY_VIEW = "security.view"
-    
+
     ORGANIZATION_CREATE = "organization.create"
     ORGANIZATION_VIEW = "organization.view"
     ORGANIZATION_UPDATE = "organization.update"
     ORGANIZATION_SUSPEND = "organization.suspend"
-    
+
     # User & Access
     USER_CREATE = "user.create"
     USER_VIEW = "user.view"

@@ -1,7 +1,9 @@
 from typing import List, Optional, Set, Tuple
+
 from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import (
     AppException,
@@ -16,7 +18,6 @@ from app.models.user import User
 from app.repositories.election_repo import ElectionRepository
 from app.schemas.common import PaginationMeta
 from app.schemas.election import ElectionCreate, ElectionSettingUpdate, ElectionUpdate
-
 
 # Allowed State Transition Map
 ALLOWED_TRANSITIONS: dict[ElectionStatus, Set[ElectionStatus]] = {
@@ -139,7 +140,7 @@ class ElectionService:
         current_user: User
     ) -> Election:
         election = await self.get_election(election_id, current_user)
-        
+
         if election.status in (ElectionStatus.LIVE, ElectionStatus.COUNTING, ElectionStatus.RESULT_PUBLISHED, ElectionStatus.ARCHIVED):
             raise AppException(
                 code="ELECTION_LOCKED",

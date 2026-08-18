@@ -1,7 +1,26 @@
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, EmailStr
-from app.models.volunteer import VolunteerStatus, TaskPriority, TaskStatus, ActivityType
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
+from app.models.volunteer import ActivityType, TaskPriority, TaskStatus, VolunteerStatus
+
+
+class VolunteerBase(BaseModel):
+    name: str
+    role: str
+    ward: str
+    phone: str
+    votersAdded: int = 0
+    callsMade: int = 0
+    slipsDistributed: int = 0
+    status: str = "Active"
+
+
+class VolunteerResponse(VolunteerBase):
+    id: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VolunteerAssignmentCreate(BaseModel):
@@ -41,11 +60,14 @@ class VolunteerAssignmentResponse(BaseModel):
 
 
 class VolunteerCreate(BaseModel):
-    first_name: str
-    last_name: str
-    email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
+    ward: Optional[str] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
-    password: str
+    password: Optional[str] = None
     volunteer_code: Optional[str] = None
     profile_photo_url: Optional[str] = None
     supervisor_id: Optional[str] = None
@@ -97,7 +119,7 @@ class VolunteerProfileOut(BaseModel):
     booth_id: Optional[str] = None
     area_id: Optional[str] = None
     polling_station_id: Optional[str] = None
-    
+
     daily_target: int
     weekly_target: int
     monthly_target: int
@@ -108,12 +130,12 @@ class VolunteerProfileOut(BaseModel):
     approved_count: int
     rejected_count: int
     duplicate_count: int
-    
+
     approval_rate: float = 0.0
     rejection_rate: float = 0.0
     duplicate_rate: float = 0.0
     achievement_percentage: float = 0.0
-    
+
     status: VolunteerStatus
     last_login_at: Optional[datetime] = None
     last_submission_at: Optional[datetime] = None
@@ -168,7 +190,7 @@ class VolunteerPerformanceOut(BaseModel):
     approval_rate: float
     rejection_rate: float
     duplicate_rate: float
-    performance_trend: str = "STEADY" # IMPROVING, STEADY, DECLINING
+    performance_trend: str = "STEADY"
 
 
 class VolunteerLeaderboardEntry(BaseModel):
@@ -187,7 +209,7 @@ class VolunteerLeaderboardEntry(BaseModel):
 class VolunteerTaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    volunteer_id: str # profile id
+    volunteer_id: str
     election_id: Optional[str] = None
     area_id: Optional[str] = None
     booth_id: Optional[str] = None

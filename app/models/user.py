@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.core.database import Base
 from app.models.base import BaseModel
 
@@ -55,11 +57,11 @@ class User(BaseModel):
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
-    
+
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
-    
+
     # MFA
     mfa_enabled = Column(Boolean, default=False, nullable=False)
     mfa_secret = Column(String(64), nullable=True)

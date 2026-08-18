@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr
+
 from app.models.data_collection import (
-    SubmissionStatus,
-    DuplicateSignal,
     DuplicateResolutionStatus,
+    DuplicateSignal,
     ReviewAction,
+    SubmissionStatus,
 )
 
 
@@ -77,7 +79,7 @@ class DataSubmissionOut(BaseModel):
     booth_id: Optional[str] = None
     area_id: Optional[str] = None
     voter_id: Optional[str] = None
-    
+
     citizen_name: str
     mobile: Optional[str] = None
     email: Optional[str] = None
@@ -90,12 +92,12 @@ class DataSubmissionOut(BaseModel):
     preferred_party_candidate: Optional[str] = None
     issues_concerns: Optional[str] = None
     custom_fields_json: Optional[str] = None
-    
+
     status: SubmissionStatus
     quality_score: float
     is_flagged_duplicate: bool
     submission_channel: str
-    
+
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[datetime] = None
     review_remarks: Optional[str] = None

@@ -15,6 +15,11 @@ from app.models.volunteer import (
     TaskStatus,
     ActivityType,
 )
+from app.models.team import TeamMember, Volunteer
+from app.models.volunteer_voter import VolunteerVoter
+from app.models.complaint import Complaint
+from app.models.expense import Expense
+from app.models.broadcast import DeliveryLog
 from app.models.data_collection import (
     DataSubmission,
     DataQualityCheck,
@@ -80,6 +85,12 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "ActivityType",
+    "TeamMember",
+    "Volunteer",
+    "VolunteerVoter",
+    "Complaint",
+    "Expense",
+    "DeliveryLog",
     "DataSubmission",
     "DataQualityCheck",
     "DataDuplicate",

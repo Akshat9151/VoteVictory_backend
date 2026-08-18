@@ -9,6 +9,11 @@ from app.services.voter_service import VoterService
 from app.services.import_service import BulkImportService
 from app.services.station_service import PollingStationService
 from app.services.volunteer_service import VolunteerService
+from app.services.team_service import TeamService
+from app.services.volunteer_voter_service import VolunteerVoterService
+from app.services.complaint_service import ComplaintService
+from app.services.expense_service import ExpenseService
+from app.services.broadcast_service import BroadcastService
 from app.services.data_collection_service import DataCollectionService
 from app.services.duplicate_detection_service import DuplicateDetectionService
 from app.services.area_booth_service import AreaBoothService
@@ -36,6 +41,11 @@ __all__ = [
     "BulkImportService",
     "PollingStationService",
     "VolunteerService",
+    "TeamService",
+    "VolunteerVoterService",
+    "ComplaintService",
+    "ExpenseService",
+    "BroadcastService",
     "DataCollectionService",
     "DuplicateDetectionService",
     "AreaBoothService",

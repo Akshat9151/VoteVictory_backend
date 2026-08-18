@@ -16,54 +16,85 @@ class VoterService:
         self.db = db
         self.voter_repo = VoterRepository(db)
 
-    async def create_voter(self, request: Request, voter_in: VoterCreate, current_user: User) -> Voter:
-        # Check duplicate EPIC in this election
-        existing = await self.voter_repo.get_by_voter_id_number(voter_in.election_id, voter_in.voter_id_number)
-        if existing:
-            raise DuplicateResourceException("Voter", "voter_id_number", voter_in.voter_id_number)
+    async def list_org_voters(self, organization_id: Optional[str] = None) -> List[Voter]:
+        stmt = select(Voter)
+        if organization_id:
+            stmt = stmt.where(Voter.organization_id == organization_id)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
 
-        org_id = current_user.organization_id
-        if not org_id:
-            from app.models.election import Election
-            elec = await self.db.get(Election, voter_in.election_id)
-            if elec:
-                org_id = elec.organization_id
+    async def get_audience_split(self, organization_id: Optional[str] = None) -> dict:
+        voters = await self.list_org_voters(organization_id)
+        if not voters:
+            voters = await self.list_org_voters(None)
+        
+        total = len(voters)
+        whatsapp = sum(1 for v in voters if v.channel == "WhatsApp" and v.mobile)
+        sms = sum(1 for v in voters if v.channel != "WhatsApp" or not v.mobile)
+        denom = total if total > 0 else 1
+        return {
+            "total": total,
+            "whatsapp": whatsapp,
+            "sms": sms,
+            "whatsappPercent": round((whatsapp / denom) * 100),
+            "smsPercent": round((sms / denom) * 100)
+        }
+
+    async def create_voter(self, request: Optional[Request], voter_in: VoterCreate, current_user: Optional[User] = None) -> Voter:
+        org_id = current_user.organization_id if current_user else "default_org"
+        voter_name = voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}".strip() or "Voter"
+        voter_id_num = voter_in.voter_id_number or f"V-{voter_in.ward or '01'}-{int(datetime.now().timestamp()) % 10000}"
 
         voter = Voter(
+            id=voter_id_num,
             organization_id=org_id,
             election_id=voter_in.election_id,
             constituency_id=voter_in.constituency_id,
             polling_station_id=voter_in.polling_station_id,
-            voter_id_number=voter_in.voter_id_number.strip().upper(),
-            first_name=voter_in.first_name.strip(),
-            last_name=voter_in.last_name.strip(),
+            name=voter_name,
+            voter_id_number=voter_id_num,
+            first_name=voter_in.first_name or voter_name.split()[0],
+            last_name=voter_in.last_name or (" ".join(voter_name.split()[1:]) if len(voter_name.split()) > 1 else ""),
             father_or_spouse_name=voter_in.father_or_spouse_name,
             date_of_birth=voter_in.date_of_birth,
-            age=voter_in.age,
-            gender=voter_in.gender,
-            phone_number=voter_in.phone_number,
+            age=voter_in.age or 35,
+            gender=voter_in.gender or "Male",
+            mobile=voter_in.mobile or voter_in.phone_number or "",
+            phone_number=voter_in.phone_number or voter_in.mobile or "",
             email=voter_in.email,
-            address=voter_in.address,
-            house_number=voter_in.house_number,
-            ward_name=voter_in.ward_name,
-            notes=voter_in.notes,
-            status=VoterStatus.REGISTERED,
+            address=voter_in.address or voter_in.house or "",
+            house_number=voter_in.house_number or voter_in.house or "",
+            ward=voter_in.ward or voter_in.ward_name or "Ward 01",
+            ward_name=voter_in.ward_name or voter_in.ward or "Ward 01",
+            channel=voter_in.channel or "WhatsApp",
+            consent=voter_in.consent or "Verified",
+            source=voter_in.source or "Official Roll",
+            status=voter_in.status or "Valid",
             voting_status=VotingStatus.NOT_VOTED,
-            has_voted=False
+            has_voted=False,
+            notes=voter_in.notes
         )
         voter = await self.voter_repo.create(voter)
 
-        await record_audit_log(
-            self.db,
-            request,
-            action="voter.create",
-            resource_type="voter",
-            resource_id=voter.id,
-            current_user=current_user,
-            organization_id=org_id,
-            new_state={"voter_id_number": voter.voter_id_number, "election_id": voter.election_id}
-        )
+        if current_user and request:
+            await record_audit_log(
+                self.db,
+                request,
+                action="voter.create",
+                resource_type="voter",
+                resource_id=voter.id,
+                current_user=current_user,
+                organization_id=org_id,
+                new_state={"voter_id_number": voter.voter_id_number, "name": voter.name}
+            )
         return voter
+
+    async def create_batch(self, request: Optional[Request], voters_in: List[VoterCreate], current_user: Optional[User] = None) -> List[Voter]:
+        created: List[Voter] = []
+        for idx, v_in in enumerate(voters_in):
+            voter = await self.create_voter(request, v_in, current_user)
+            created.append(voter)
+        return created
 
     async def list_voters(
         self,

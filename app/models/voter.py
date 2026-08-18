@@ -23,31 +23,34 @@ class VotingStatus(str, enum.Enum):
 
 class Voter(BaseModel):
     __tablename__ = "voters"
-    __table_args__ = (
-        UniqueConstraint("election_id", "voter_id_number", name="uq_election_voter_id"),
-    )
 
-    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    election_id = Column(String(36), ForeignKey("elections.id", ondelete="CASCADE"), nullable=False, index=True)
-    constituency_id = Column(String(36), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
-    polling_station_id = Column(String(36), ForeignKey("polling_stations.id", ondelete="SET NULL"), nullable=True, index=True)
+    organization_id = Column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    election_id = Column(String(64), ForeignKey("elections.id", ondelete="CASCADE"), nullable=True, index=True)
+    constituency_id = Column(String(64), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
+    polling_station_id = Column(String(64), ForeignKey("polling_stations.id", ondelete="SET NULL"), nullable=True, index=True)
     
-    voter_id_number = Column(String(100), nullable=False, index=True) # Official EPIC / Voter ID
-    first_name = Column(String(100), nullable=False, index=True)
-    last_name = Column(String(100), nullable=False, index=True)
+    name = Column(String(255), nullable=True, index=True)
+    voter_id_number = Column(String(100), nullable=True, index=True) # Official EPIC / Voter ID
+    first_name = Column(String(100), nullable=True, index=True)
+    last_name = Column(String(100), nullable=True, index=True)
     father_or_spouse_name = Column(String(100), nullable=True)
     date_of_birth = Column(Date, nullable=True)
     age = Column(Integer, nullable=True)
-    gender = Column(String(20), nullable=True) # MALE, FEMALE, OTHER
+    gender = Column(String(50), nullable=True)
     
+    mobile = Column(String(50), nullable=True, index=True)
     phone_number = Column(String(50), nullable=True, index=True)
     email = Column(String(255), nullable=True)
     address = Column(Text, nullable=True)
     house_number = Column(String(100), nullable=True)
+    ward = Column(String(100), nullable=True)
     ward_name = Column(String(100), nullable=True)
     
-    status = Column(Enum(VoterStatus), default=VoterStatus.REGISTERED, nullable=False, index=True)
-    voting_status = Column(Enum(VotingStatus), default=VotingStatus.NOT_VOTED, nullable=False, index=True)
+    channel = Column(String(50), default="WhatsApp", nullable=True)
+    consent = Column(String(50), default="Verified", nullable=True)
+    source = Column(String(100), default="Official Roll", nullable=True)
+    status = Column(String(50), default="Valid", nullable=True, index=True)
+    voting_status = Column(Enum(VotingStatus), default=VotingStatus.NOT_VOTED, nullable=True, index=True)
     has_voted = Column(Boolean, default=False, nullable=False, index=True)
     voted_at = Column(DateTime(timezone=True), nullable=True)
     

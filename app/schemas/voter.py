@@ -1,27 +1,57 @@
 from datetime import date, datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from app.models.voter import VoterStatus, VotingStatus
 
 
 class VoterBase(BaseModel):
-    voter_id_number: str = Field(..., min_length=2, max_length=100)
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
+    name: Optional[str] = None
+    voter_id_number: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     father_or_spouse_name: Optional[str] = None
     date_of_birth: Optional[date] = None
-    age: Optional[int] = Field(None, ge=18, le=120)
-    gender: Optional[str] = None
+    age: Optional[int] = Field(None, ge=1, le=120)
+    gender: Optional[str] = "Male"
+    ward: Optional[str] = None
+    mobile: Optional[str] = ""
     phone_number: Optional[str] = None
     email: Optional[EmailStr] = None
+    channel: Optional[str] = "WhatsApp"
+    consent: Optional[str] = "Verified"
+    source: Optional[str] = "Official Roll"
+    status: Optional[str] = "Valid"
+    house: Optional[str] = None
     address: Optional[str] = None
     house_number: Optional[str] = None
     ward_name: Optional[str] = None
     notes: Optional[str] = None
 
+    def __init__(self, **data):
+        # Sync name <-> first_name / last_name
+        if "name" in data and data["name"] and not data.get("first_name"):
+            parts = data["name"].split(" ", 1)
+            data["first_name"] = parts[0]
+            data["last_name"] = parts[1] if len(parts) > 1 else ""
+        elif ("first_name" in data or "last_name" in data) and not data.get("name"):
+            data["name"] = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
+
+        # Sync mobile <-> phone_number
+        if "mobile" in data and not data.get("phone_number"):
+            data["phone_number"] = data["mobile"]
+        elif "phone_number" in data and not data.get("mobile"):
+            data["mobile"] = data["phone_number"]
+
+        # Sync ward <-> ward_name
+        if "ward" in data and not data.get("ward_name"):
+            data["ward_name"] = data["ward"]
+        elif "ward_name" in data and not data.get("ward"):
+            data["ward"] = data["ward_name"]
+
+        super().__init__(**data)
+
 
 class VoterCreate(VoterBase):
-    election_id: str
+    election_id: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
 
@@ -38,14 +68,14 @@ class VoterUpdate(BaseModel):
     address: Optional[str] = None
     house_number: Optional[str] = None
     ward_name: Optional[str] = None
-    status: Optional[VoterStatus] = None
+    status: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
     notes: Optional[str] = None
 
 
 class VoterVerificationRequest(BaseModel):
-    verification_method: str = "OTP" # OTP, ID_CARD, MANUAL
+    verification_method: str = "OTP"
     id_document_type: Optional[str] = None
     id_document_number: Optional[str] = None
 
@@ -61,23 +91,43 @@ class VoterResponse(VoterBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    organization_id: str
-    election_id: str
+    organization_id: Optional[str] = None
+    election_id: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
-    status: VoterStatus
-    voting_status: VotingStatus
-    has_voted: bool
+    status: Optional[str] = "Valid"
+    voting_status: Optional[str] = "ELIGIBLE"
+    has_voted: Optional[bool] = False
     voted_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class VoterFilterParams(BaseModel):
     search: Optional[str] = None
-    status: Optional[VoterStatus] = None
-    voting_status: Optional[VotingStatus] = None
+    status: Optional[str] = None
+    voting_status: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
     ward_name: Optional[str] = None
     has_voted: Optional[bool] = None
+
+
+class AudienceSplit(BaseModel):
+    total: int
+    whatsapp: int
+    sms: int
+    whatsappPercent: int
+    smsPercent: int
+
+
+class OcrStagedRow(BaseModel):
+    id: str
+    epicNo: str
+    name: str
+    relativeName: str
+    age: int
+    gender: str
+    houseNo: str
+    mobile: str
+    confidence: float

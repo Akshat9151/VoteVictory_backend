@@ -17,33 +17,56 @@ class CandidateService:
         self.db = db
         self.cand_repo = BaseRepository(Candidate, db)
 
-    async def create_candidate(self, request: Request, cand_in: CandidateCreate, current_user: User) -> Candidate:
+    async def list_org_candidates(self, organization_id: Optional[str] = None) -> List[Candidate]:
+        stmt = select(Candidate).options(selectinload(Candidate.documents))
+        if organization_id:
+            stmt = stmt.where(Candidate.organization_id == organization_id)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def create_candidate(self, request: Request, cand_in: CandidateCreate, current_user: Optional[User] = None) -> Candidate:
+        full_name = cand_in.full_name or cand_in.name or "Candidate"
+        org_id = current_user.organization_id if current_user else cand_in.election_id
+
         cand = Candidate(
+            organization_id=org_id,
             election_id=cand_in.election_id,
             position_id=cand_in.position_id,
             constituency_id=cand_in.constituency_id,
-            full_name=cand_in.full_name.strip(),
+            name=cand_in.name or full_name,
+            hindiName=cand_in.hindiName or full_name,
+            post=cand_in.post or ("Sarpanch (Gram Panchayat)" if cand_in.postType == "sarpanch" else "Panch (Ward)"),
+            postType=cand_in.postType or "sarpanch",
+            constituency_name=cand_in.constituency or "Gram Panchayat Rampur",
+            symbol=cand_in.symbol or "🚜",
+            symbolName=cand_in.symbolName or "Tractor",
+            photo=cand_in.photo or cand_in.photo_url or "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+            slogan=cand_in.slogan or "गांव का समग्र विकास, हर घर विश्वास और खुशहाली!",
+            votersCount=cand_in.votersCount or 3500,
+            volunteersCount=cand_in.volunteersCount or 24,
+            manifesto=cand_in.manifesto or "",
+            full_name=full_name.strip(),
             candidate_id_number=cand_in.candidate_id_number,
-            party_name=cand_in.party_name,
-            party_symbol_url=cand_in.party_symbol_url,
-            photo_url=cand_in.photo_url,
+            party_name=cand_in.party_name or cand_in.symbolName,
+            party_symbol_url=cand_in.party_symbol_url or cand_in.symbol,
+            photo_url=cand_in.photo_url or cand_in.photo,
             phone=cand_in.phone,
             email=cand_in.email,
-            manifesto=cand_in.manifesto,
-            display_order=cand_in.display_order,
-            status=CandidateStatus.PENDING
+            display_order=cand_in.display_order or 0,
+            status=CandidateStatus.APPROVED
         )
         cand = await self.cand_repo.create(cand)
 
-        await record_audit_log(
-            self.db,
-            request,
-            action="candidate.create",
-            resource_type="candidate",
-            resource_id=cand.id,
-            current_user=current_user,
-            new_state={"full_name": cand.full_name, "election_id": cand.election_id, "status": cand.status.value}
-        )
+        if current_user:
+            await record_audit_log(
+                self.db,
+                request,
+                action="candidate.create",
+                resource_type="candidate",
+                resource_id=cand.id,
+                current_user=current_user,
+                new_state={"full_name": cand.full_name, "status": cand.status.value}
+            )
         return cand
 
     async def list_candidates(

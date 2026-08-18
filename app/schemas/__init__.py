@@ -7,6 +7,7 @@ from app.schemas.auth import (
     PasswordResetConfirm,
     PasswordResetRequest,
     RefreshTokenRequest,
+    LogoutRequest,
     TokenPayload,
     UserRegisterRequest,
     MFASetupResponse,
@@ -68,6 +69,7 @@ from app.schemas.volunteer import (
     VolunteerActivityOut,
     VolunteerPerformanceOut,
     VolunteerLeaderboardEntry,
+    VolunteerResponse,
 )
 from app.schemas.data_collection import (
     DataSubmissionCreate,
@@ -116,6 +118,8 @@ from app.schemas.voter import (
     VoterVerificationRequest,
     VoterVerificationResponse,
     VoterFilterParams,
+    AudienceSplit,
+    OcrStagedRow,
 )
 from app.schemas.voting import (
     BallotAuditReceipt,
@@ -123,6 +127,34 @@ from app.schemas.voting import (
     CastVoteResponse,
     VotingSessionInitiate,
     VotingSessionResponse,
+)
+from app.schemas.team import (
+    TeamMemberBase,
+    TeamMemberCreate,
+    TeamMemberResponse,
+)
+from app.schemas.volunteer_voter import (
+    VolunteerVoterBase,
+    VolunteerVoterCreate,
+    VolunteerVoterStatusUpdate,
+    VolunteerVoterResponse,
+)
+from app.schemas.complaint import (
+    ComplaintBase,
+    ComplaintCreate,
+    ComplaintStatusUpdate,
+    ComplaintResponse,
+)
+from app.schemas.expense import (
+    ExpenseBase,
+    ExpenseCreate,
+    ExpenseResponse,
+    BudgetSummary,
+)
+from app.schemas.broadcast import (
+    DeliveryLogResponse,
+    BroadcastPayload,
+    BroadcastResponse,
 )
 from app.schemas.webhook import WebhookPayload
 
@@ -140,6 +172,7 @@ __all__ = [
     "PasswordResetConfirm",
     "PasswordResetRequest",
     "RefreshTokenRequest",
+    "LogoutRequest",
     "TokenPayload",
     "UserRegisterRequest",
     "MFASetupResponse",
@@ -224,6 +257,7 @@ __all__ = [
     "VolunteerActivityOut",
     "VolunteerPerformanceOut",
     "VolunteerLeaderboardEntry",
+    "VolunteerResponse",
     "DataSubmissionCreate",
     "DataSubmissionUpdate",
     "DataSubmissionOut",
@@ -260,6 +294,26 @@ __all__ = [
     "VoterVerificationRequest",
     "VoterVerificationResponse",
     "VoterFilterParams",
+    "AudienceSplit",
+    "OcrStagedRow",
+    "TeamMemberBase",
+    "TeamMemberCreate",
+    "TeamMemberResponse",
+    "VolunteerVoterBase",
+    "VolunteerVoterCreate",
+    "VolunteerVoterStatusUpdate",
+    "VolunteerVoterResponse",
+    "ComplaintBase",
+    "ComplaintCreate",
+    "ComplaintStatusUpdate",
+    "ComplaintResponse",
+    "ExpenseBase",
+    "ExpenseCreate",
+    "ExpenseResponse",
+    "BudgetSummary",
+    "DeliveryLogResponse",
+    "BroadcastPayload",
+    "BroadcastResponse",
     "BallotAuditReceipt",
     "CastVoteRequest",
     "CastVoteResponse",

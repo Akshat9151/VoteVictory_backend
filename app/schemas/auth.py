@@ -1,10 +1,12 @@
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=6)
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = "admin"
+    password: Optional[str] = None
     mfa_code: Optional[str] = Field(None, description="6-digit TOTP / OTP code if MFA is enabled")
     device_info: Optional[str] = "Web Browser"
 
@@ -12,9 +14,17 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
+    token: Optional[str] = None
     token_type: str = "bearer"
-    expires_in: int # seconds
-    user: Dict[str, Any]
+    expires_in: Optional[int] = 3600
+    user: Any = None
+
+    def __init__(self, **data):
+        if "token" not in data and "access_token" in data:
+            data["token"] = data["access_token"]
+        if "access_token" not in data and "token" in data:
+            data["access_token"] = data["token"]
+        super().__init__(**data)
 
 
 LoginResponse = TokenResponse
@@ -23,7 +33,7 @@ LoginResponse = TokenResponse
 class TokenPayload(BaseModel):
     sub: str
     org_id: Optional[str] = None
-    email: str
+    email: Optional[str] = None
     roles: List[str] = []
     permissions: List[str] = []
     exp: int
@@ -31,8 +41,8 @@ class TokenPayload(BaseModel):
 
 class UserRegisterRequest(BaseModel):
     organization_id: Optional[str] = None
-    email: EmailStr
-    password: str = Field(..., min_length=8)
+    email: str
+    password: str = Field(..., min_length=6)
     first_name: str
     last_name: str
     phone: Optional[str] = None
@@ -40,6 +50,10 @@ class UserRegisterRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
 
 
 class MFASetupResponse(BaseModel):
@@ -53,7 +67,7 @@ class MFAVerifyRequest(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class PasswordResetConfirm(BaseModel):

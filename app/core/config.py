@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     # General
-    PROJECT_NAME: str = "Voting & Election Management System"
+    PROJECT_NAME: str = "ElectWin - Election Campaign Management System"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
@@ -24,30 +24,37 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://127.0.0.1:5500",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "*"
     ]
 
-    # PostgreSQL Relational Database (asyncpg for Async, psycopg2 for Sync/Workers)
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/voting_db"
-    DATABASE_SYNC_URL: str = "postgresql://postgres:postgres@localhost:5432/voting_db"
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./electwin_dev.db"
+    DATABASE_SYNC_URL: str = "sqlite:///./electwin_dev.db"
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
+
+    # Election Commission Statutory Budget Limit (₹1,50,000 ceiling)
+    STATUTORY_BUDGET_LIMIT: float = 150000.0
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_SESSION_TTL_SECONDS: int = 604800  # 7 days
     RATE_LIMIT_PER_MINUTE: int = 120
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 15
+    RATE_LIMIT_BROADCAST_PER_MINUTE: int = 10
+    AUDIENCE_SPLIT_CACHE_TTL_SECONDS: int = 300
 
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
     # Security & Tokens
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     JWT_ALGORITHM: str = "HS256"
     PASSWORD_HASH_SCHEME: str = "argon2" # argon2 | bcrypt
@@ -55,6 +62,7 @@ class Settings(BaseSettings):
     ACCOUNT_LOCKOUT_MINUTES: int = 15
 
     # Super Admin Bootstrap
+    FIRST_SUPER_ADMIN_PHONE: str = "+91 98290 14285"
     FIRST_SUPER_ADMIN_EMAIL: str = "superadmin@electwin.com"
     FIRST_SUPER_ADMIN_PASSWORD: str = "SuperSecureAdminPassword123!"
     FIRST_SUPER_ADMIN_FIRST_NAME: str = "Super"

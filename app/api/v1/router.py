@@ -6,12 +6,15 @@ from app.api.v1.endpoints import (
     auth,
     banners,
     booths,
+    broadcast,
     candidates,
     checkin,
+    complaints,
     constituencies,
     dashboard,
     data_collection,
     elections,
+    expenses,
     health,
     imports,
     notifications,
@@ -20,8 +23,10 @@ from app.api.v1.endpoints import (
     positions,
     reports,
     results,
+    team,
     templates,
     users,
+    volunteer_voters,
     volunteers,
     voters,
     voting,
@@ -39,7 +44,12 @@ api_router.include_router(positions.router)
 api_router.include_router(constituencies.router)
 api_router.include_router(booths.router)
 api_router.include_router(candidates.router)
+api_router.include_router(team.router)
 api_router.include_router(voters.router)
+api_router.include_router(broadcast.router)
+api_router.include_router(complaints.router)
+api_router.include_router(expenses.router)
+api_router.include_router(volunteer_voters.router)
 api_router.include_router(imports.router)
 api_router.include_router(polling_stations.router)
 api_router.include_router(volunteers.router)

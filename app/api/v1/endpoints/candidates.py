@@ -1,10 +1,11 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import inspect
+
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user, require_permissions, require_roles
+from app.core.dependencies import get_optional_current_user, require_permissions
 from app.core.permissions import PermissionCode
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.organization import Organization

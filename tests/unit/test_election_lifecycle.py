@@ -1,4 +1,3 @@
-import pytest
 from app.models.election import ElectionStatus
 from app.services.election_service import ALLOWED_TRANSITIONS
 

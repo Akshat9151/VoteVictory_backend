@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.booth import Booth
 from app.repositories.base import BaseRepository
 

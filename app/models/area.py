@@ -1,6 +1,8 @@
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+
+from sqlalchemy import Column, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -22,7 +24,7 @@ class Ward(BaseModel):
 
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     constituency_id = Column(String(36), ForeignKey("constituencies.id", ondelete="CASCADE"), nullable=True, index=True)
-    
+
     ward_number = Column(String(50), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -38,7 +40,7 @@ class Booth(BaseModel):
     organization_id = Column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     constituency_id = Column(String(64), ForeignKey("constituencies.id", ondelete="CASCADE"), nullable=True, index=True)
     ward_id = Column(String(64), ForeignKey("wards.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     booth_number = Column(String(50), nullable=False, index=True, default="Booth 01")
     boothNo = Column(String(50), nullable=True, index=True)
     name = Column(String(255), nullable=True, default="Booth")
@@ -50,7 +52,7 @@ class Booth(BaseModel):
     coverage = Column(String(32), default="0%", nullable=False)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    
+
     target = Column(Integer, default=1000, nullable=False)
     collected_count = Column(Integer, default=0, nullable=False)
     status = Column(Enum(BoothStatus), default=BoothStatus.ACTIVE, nullable=False, index=True)

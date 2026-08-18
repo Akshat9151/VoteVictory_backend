@@ -1,6 +1,8 @@
 import random
 from typing import List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import NotFoundException
 from app.models.user import User

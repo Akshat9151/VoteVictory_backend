@@ -1,9 +1,11 @@
 from typing import Any, Dict
+
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-import redis.asyncio as aioredis
+
 from app.core.config import settings
 from app.core.database import get_db
 
@@ -28,7 +30,6 @@ async def liveness_probe() -> Dict[str, str]:
 @router.get("/health/ready")
 async def readiness_probe(db: AsyncSession = Depends(get_db)):
     db_ok = False
-    redis_ok = False
     details = {}
 
     # Check Database
@@ -43,7 +44,6 @@ async def readiness_probe(db: AsyncSession = Depends(get_db)):
     try:
         r = aioredis.from_url(settings.REDIS_URL, socket_timeout=1.0)
         await r.ping()
-        redis_ok = True
         details["redis"] = "connected"
         await r.aclose()
     except Exception as e:

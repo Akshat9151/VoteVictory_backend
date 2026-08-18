@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-import httpx
+
 from app.adapters.base import NotificationDeliveryResult, NotificationProvider
 from app.core.config import settings
 

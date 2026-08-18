@@ -1,6 +1,6 @@
-import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
+
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger("app.worker.tasks")

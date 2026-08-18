@@ -1,11 +1,18 @@
 from datetime import datetime, timezone
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log, record_security_event
-from app.core.exceptions import AppException, DoubleVotingException, ResourceNotFoundException, VoterEligibilityException
+from app.core.exceptions import (
+    AppException,
+    DoubleVotingException,
+    ResourceNotFoundException,
+    VoterEligibilityException,
+)
 from app.models.audit import SecuritySeverity
 from app.models.user import User
-from app.models.voter import Voter, VoterCheckin, VoterStatus, VotingStatus
+from app.models.voter import VoterCheckin, VoterStatus, VotingStatus
 from app.repositories.voter_repo import VoterRepository
 from app.schemas.checkin import VoterCheckinRequest, VoterCheckinResponse
 

@@ -1,18 +1,17 @@
-import pytest
+import pyotp
+
 from app.core.security import (
     compute_ballot_hash,
     create_access_token,
     create_refresh_token,
     decode_access_token,
     generate_ballot_nonce,
-    generate_recovery_codes,
     generate_totp_secret,
     get_password_hash,
     hash_token,
     verify_password,
     verify_totp,
 )
-import pyotp
 
 
 def test_password_hashing_argon2id():
@@ -67,7 +66,7 @@ def test_ballot_hmac_serial_hash():
     election_id = "elec_999"
     nonce1 = generate_ballot_nonce()
     nonce2 = generate_ballot_nonce()
-    
+
     hash1 = compute_ballot_hash(election_id, nonce1)
     hash2 = compute_ballot_hash(election_id, nonce2)
 

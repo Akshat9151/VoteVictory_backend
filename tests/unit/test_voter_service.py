@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.exceptions import ConflictException
 from app.schemas.voter import VoterCreate
 from app.services.voter_service import VoterService

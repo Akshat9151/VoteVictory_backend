@@ -1,21 +1,21 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from fastapi import Request
-from sqlalchemy import func, select, desc
-from sqlalchemy.orm import selectinload
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.audit import record_audit_log
-from app.core.exceptions import BadRequestException, ConflictException, ResourceNotFoundException
+from app.core.exceptions import ConflictException, ResourceNotFoundException
 from app.core.security import get_password_hash
 from app.models.election import Election
 from app.models.organization import Organization
-from app.models.polling_station import PollingStation, VolunteerAssignment
+from app.models.polling_station import VolunteerAssignment
 from app.models.user import Role, RoleCode, User, UserRole
 from app.models.volunteer import (
     ActivityType,
-    TaskPriority,
     TaskStatus,
     VolunteerActivity,
     VolunteerProfile,
@@ -31,12 +31,10 @@ from app.schemas.volunteer import (
     VolunteerLeaderboardEntry,
     VolunteerPerformanceOut,
     VolunteerProfileOut,
-    VolunteerStatusUpdate,
     VolunteerTargetCreate,
     VolunteerTargetOut,
     VolunteerTaskCreate,
     VolunteerTaskOut,
-    VolunteerTaskUpdate,
     VolunteerUpdate,
 )
 

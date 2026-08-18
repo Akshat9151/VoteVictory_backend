@@ -1,6 +1,8 @@
 from typing import Optional
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.expense import Expense
 from app.repositories.base import BaseRepository
 

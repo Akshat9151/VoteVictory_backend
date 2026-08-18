@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import log_audit_event
-from app.models.booth import Booth
-from app.models.team import TeamMember, Volunteer
+from app.models.team import TeamMember
 from app.models.user import User
 from app.repositories.booth_repo import BoothRepository
 from app.repositories.team_repo import TeamMemberRepository, VolunteerRepository

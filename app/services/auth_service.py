@@ -1,27 +1,26 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Tuple
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log, record_security_event
 from app.core.config import settings
 from app.core.exceptions import (
     AccountLockedException,
     AuthenticationException,
     MFARequiredException,
-    ResourceNotFoundException,
 )
-from app.models.audit import SecuritySeverity
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     generate_recovery_codes,
     generate_totp_secret,
-    get_password_hash,
     get_totp_uri,
     hash_token,
     verify_password,
     verify_totp,
 )
+from app.models.audit import SecuritySeverity
 from app.models.user import User, UserSession
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import LoginRequest, MFASetupResponse, TokenResponse
@@ -94,7 +93,7 @@ class AuthService:
                     expires_delta=timedelta(minutes=5)
                 )
                 raise MFARequiredException(temp_token=temp_token)
-            
+
             if not verify_totp(user.mfa_secret, login_data.mfa_code):
                 await record_security_event(
                     self.db,
@@ -183,7 +182,7 @@ class AuthService:
     async def refresh_access_token(self, request: Request, refresh_token: str) -> TokenResponse:
         token_hash = hash_token(refresh_token)
         session = await self.user_repo.get_session_by_hash(token_hash)
-        
+
         if not session or session.is_revoked or session.expires_at < datetime.now(timezone.utc):
             await record_security_event(
                 self.db,

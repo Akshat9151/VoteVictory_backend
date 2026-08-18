@@ -1,7 +1,9 @@
 from typing import Any, Dict, List
-from fastapi import APIRouter, Depends, Request
+
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode

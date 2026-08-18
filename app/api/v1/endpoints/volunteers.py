@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,12 +16,10 @@ from app.schemas.volunteer import (
     VolunteerLeaderboardEntry,
     VolunteerPerformanceOut,
     VolunteerProfileOut,
-    VolunteerStatusUpdate,
     VolunteerTargetCreate,
     VolunteerTargetOut,
     VolunteerTaskCreate,
     VolunteerTaskOut,
-    VolunteerTaskUpdate,
     VolunteerUpdate,
 )
 from app.services.volunteer_service import VolunteerService

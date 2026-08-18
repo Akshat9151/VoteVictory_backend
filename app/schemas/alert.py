@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
-from app.models.alert import OperationalAlertType, AlertSeverity
+
+from app.models.alert import AlertSeverity, OperationalAlertType
 
 
 class OperationalAlertOut(BaseModel):

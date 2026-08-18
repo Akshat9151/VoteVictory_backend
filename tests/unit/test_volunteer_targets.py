@@ -1,5 +1,4 @@
-import pytest
-from app.schemas.volunteer import VolunteerPerformanceOut, VolunteerLeaderboardEntry
+from app.schemas.volunteer import VolunteerLeaderboardEntry, VolunteerPerformanceOut
 
 
 def test_volunteer_performance_calculations():

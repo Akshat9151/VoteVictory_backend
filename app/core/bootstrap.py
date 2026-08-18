@@ -1,10 +1,12 @@
 import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import settings
 from app.core.permissions import DEFAULT_ROLE_PERMISSIONS, PermissionCode, RoleCode
 from app.core.security import get_password_hash
-from app.models.area import Booth, Ward
+from app.models.area import Booth
 from app.models.broadcast import DeliveryLog
 from app.models.candidate import Candidate
 from app.models.complaint import Complaint

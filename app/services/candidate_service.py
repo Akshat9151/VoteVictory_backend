@@ -1,11 +1,13 @@
 from typing import List, Optional, Tuple
+
 from fastapi import Request
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import ResourceNotFoundException
-from app.models.candidate import Candidate, CandidateDocument, CandidateStatus
+from app.models.candidate import Candidate, CandidateStatus
 from app.models.user import User
 from app.repositories.base import BaseRepository
 from app.schemas.candidate import CandidateCreate, CandidateStatusUpdateRequest, CandidateUpdate

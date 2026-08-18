@@ -13,7 +13,7 @@ async def test_unauthorized_access_denied(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_volunteer_privilege_escalation_prevented(client: AsyncClient, volunteer_token: str):
     headers = {"Authorization": f"Bearer {volunteer_token}"}
-    
+
     # Volunteer attempts to create an organization -> 403
     resp = await client.post("/api/v1/organizations/", json={"name": "Fake Org", "slug": "fake"}, headers=headers)
     assert resp.status_code == 403

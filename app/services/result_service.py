@@ -1,17 +1,17 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+
 from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import AppException, ResourceNotFoundException
 from app.models.candidate import Candidate
-from app.models.election import Election, ElectionStatus, Position
+from app.models.election import ElectionStatus, Position
 from app.models.result import Result, ResultStatus, ResultSummary
 from app.models.user import User
 from app.models.voter import Voter, VoterCheckin
 from app.models.voting import Ballot, Vote
-from app.repositories.base import BaseRepository
 from app.repositories.election_repo import ElectionRepository
 from app.repositories.voting_repo import VotingRepository
 from app.schemas.result import (

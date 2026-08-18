@@ -1,7 +1,9 @@
 import time
 from typing import Callable, Optional
-from fastapi import Request
+
 import redis.asyncio as aioredis
+from fastapi import Request
+
 from app.core.config import settings
 from app.core.exceptions import RateLimitExceededException
 
@@ -34,7 +36,7 @@ class RateLimiter:
         client_ip = request.client.host if request.client else "127.0.0.1"
         key_id = identifier or client_ip
         key = f"{self.prefix}:{key_id}"
-        
+
         redis_client = await self.get_redis()
         current_time = int(time.time())
         window_start = current_time - 60

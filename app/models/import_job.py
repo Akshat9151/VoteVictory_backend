@@ -1,6 +1,8 @@
 import enum
+
 from sqlalchemy import Column, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -18,18 +20,18 @@ class ImportJob(BaseModel):
 
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(512), nullable=False)
     file_size_bytes = Column(Integer, nullable=True)
     status = Column(Enum(ImportStatus), default=ImportStatus.UPLOADED, nullable=False, index=True)
-    
+
     total_rows = Column(Integer, default=0, nullable=False)
     valid_rows = Column(Integer, default=0, nullable=False)
     duplicate_rows = Column(Integer, default=0, nullable=False)
     invalid_rows = Column(Integer, default=0, nullable=False)
     imported_rows = Column(Integer, default=0, nullable=False)
-    
+
     report_json = Column(Text, nullable=True)
     preview_data_json = Column(Text, nullable=True)
     created_by = Column(String(36), nullable=True)

@@ -1,7 +1,9 @@
-from typing import List, Optional
+from typing import List
+
 from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
 from app.core.exceptions import ResourceNotFoundException
 from app.models.election import Position

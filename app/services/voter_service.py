@@ -1,14 +1,23 @@
+from datetime import datetime
 from typing import List, Optional, Tuple
+
 from fastapi import Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import record_audit_log
-from app.core.exceptions import DuplicateResourceException, PermissionDeniedException, ResourceNotFoundException
+from app.core.exceptions import ResourceNotFoundException
 from app.models.user import User
 from app.models.voter import Voter, VoterStatus, VoterVerification, VotingStatus
 from app.repositories.voter_repo import VoterRepository
 from app.schemas.common import PaginationMeta
-from app.schemas.voter import VoterCreate, VoterFilterParams, VoterUpdate, VoterVerificationRequest, VoterVerificationResponse
+from app.schemas.voter import (
+    VoterCreate,
+    VoterFilterParams,
+    VoterUpdate,
+    VoterVerificationRequest,
+    VoterVerificationResponse,
+)
 
 
 class VoterService:
@@ -27,7 +36,7 @@ class VoterService:
         voters = await self.list_org_voters(organization_id)
         if not voters:
             voters = await self.list_org_voters(None)
-        
+
         total = len(voters)
         whatsapp = sum(1 for v in voters if v.channel == "WhatsApp" and v.mobile)
         sms = sum(1 for v in voters if v.channel != "WhatsApp" or not v.mobile)
@@ -106,7 +115,7 @@ class VoterService:
         assigned_station_id: Optional[str] = None
     ) -> Tuple[List[Voter], PaginationMeta]:
         stmt_filters = {"election_id": election_id}
-        
+
         # Station restriction for volunteer
         if assigned_station_id:
             stmt_filters["polling_station_id"] = assigned_station_id
@@ -195,7 +204,7 @@ class VoterService:
         current_user: User
     ) -> VoterVerificationResponse:
         voter = await self.get_voter(voter_id)
-        
+
         verification = VoterVerification(
             voter_id=voter.id,
             verification_method=verify_in.verification_method,
@@ -205,7 +214,7 @@ class VoterService:
             id_document_number=verify_in.id_document_number
         )
         self.db.add(verification)
-        
+
         voter.status = VoterStatus.VERIFIED
         await self.voter_repo.update(voter)
 

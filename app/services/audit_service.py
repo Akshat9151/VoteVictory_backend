@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
-from sqlalchemy import select
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.audit import AuditLog, SecurityEvent
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository

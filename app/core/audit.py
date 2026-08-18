@@ -1,7 +1,9 @@
 import json
 from typing import Any, Dict, Optional
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
 from app.models.user import User
 
@@ -34,7 +36,7 @@ async def record_audit_log(
     act_role = actor_role or (getattr(current_user, "role", None) if current_user else None)
     if not act_role and current_user and hasattr(current_user, "roles") and current_user.roles:
         act_role = current_user.roles[0].role.code if hasattr(current_user.roles[0], "role") else None
-    
+
     org_id = organization_id or (current_user.organization_id if current_user else "default_org")
 
     payload_state = new_state or details

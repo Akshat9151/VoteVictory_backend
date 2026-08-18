@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.complaint import Complaint
 from app.repositories.base import BaseRepository
 

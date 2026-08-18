@@ -1,8 +1,10 @@
 from typing import List, Optional
+
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.election import Constituency, Election, ElectionSetting, Position
+from sqlalchemy.orm import selectinload
+
+from app.models.election import Election
 from app.repositories.base import BaseRepository
 
 

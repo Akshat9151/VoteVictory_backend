@@ -1,6 +1,5 @@
-from typing import Optional
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.volunteer_voter import VolunteerVoter
 from app.repositories.base import BaseRepository
 

@@ -1,18 +1,22 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, Query
+from typing import Optional
+
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user, require_permissions
-from app.core.permissions import PermissionCode
+from app.core.dependencies import get_optional_current_user
 from app.models.organization import Organization
 from app.models.team import Volunteer
 from app.models.user import User
 from app.models.voter import Voter
-from app.schemas.analytics import AnalyticsData, ChannelDeliveryItem, MaterialPrintItem, VolunteerProductivityItem, WardCoverageItem
-from app.schemas.common import APIResponse
-from app.services.analytics_service import AnalyticsService
+from app.schemas.analytics import (
+    AnalyticsData,
+    ChannelDeliveryItem,
+    MaterialPrintItem,
+    VolunteerProductivityItem,
+    WardCoverageItem,
+)
 
 router = APIRouter(prefix="/analytics", tags=["Operational Analytics & Charts Engine"])
 

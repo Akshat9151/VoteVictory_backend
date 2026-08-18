@@ -1,6 +1,8 @@
 import enum
+
 from sqlalchemy import Column, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -19,7 +21,7 @@ class Candidate(BaseModel):
     election_id = Column(String(64), ForeignKey("elections.id", ondelete="CASCADE"), nullable=True, index=True)
     position_id = Column(String(64), ForeignKey("positions.id", ondelete="CASCADE"), nullable=True, index=True)
     constituency_id = Column(String(64), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     name = Column(String(255), nullable=True, index=True)
     hindiName = Column(String(255), nullable=True)
     post = Column(String(100), nullable=True)
@@ -40,7 +42,7 @@ class Candidate(BaseModel):
     photo_url = Column(String(512), nullable=True)
     phone = Column(String(50), nullable=True)
     email = Column(String(255), nullable=True)
-    
+
     status = Column(Enum(CandidateStatus), default=CandidateStatus.APPROVED, nullable=False, index=True)
     display_order = Column(Integer, default=0, nullable=False)
     rejection_reason = Column(Text, nullable=True)

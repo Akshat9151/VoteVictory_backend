@@ -1,6 +1,6 @@
-import os
 from typing import List, Union
-from pydantic import AnyHttpUrl, field_validator
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
     SECRET_KEY: str = "super-secret-system-key-change-in-production-0123456789abcdef"
-    
+
     ALLOWED_HOSTS: List[str] = ["*"]
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, EmailStr
-from app.models.volunteer import VolunteerStatus, TaskPriority, TaskStatus, ActivityType
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
+from app.models.volunteer import ActivityType, TaskPriority, TaskStatus, VolunteerStatus
 
 
 class VolunteerBase(BaseModel):
@@ -117,7 +119,7 @@ class VolunteerProfileOut(BaseModel):
     booth_id: Optional[str] = None
     area_id: Optional[str] = None
     polling_station_id: Optional[str] = None
-    
+
     daily_target: int
     weekly_target: int
     monthly_target: int
@@ -128,12 +130,12 @@ class VolunteerProfileOut(BaseModel):
     approved_count: int
     rejected_count: int
     duplicate_count: int
-    
+
     approval_rate: float = 0.0
     rejection_rate: float = 0.0
     duplicate_rate: float = 0.0
     achievement_percentage: float = 0.0
-    
+
     status: VolunteerStatus
     last_login_at: Optional[datetime] = None
     last_submission_at: Optional[datetime] = None

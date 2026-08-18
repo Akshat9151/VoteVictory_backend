@@ -1,6 +1,8 @@
 import enum
+
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -15,7 +17,7 @@ class PollingStation(BaseModel):
 
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="CASCADE"), nullable=False, index=True)
     constituency_id = Column(String(36), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     name = Column(String(255), nullable=False)
     code = Column(String(50), nullable=False, index=True)
     address = Column(Text, nullable=False)
@@ -39,7 +41,7 @@ class VolunteerAssignment(BaseModel):
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     election_id = Column(String(36), ForeignKey("elections.id", ondelete="CASCADE"), nullable=False, index=True)
     polling_station_id = Column(String(36), ForeignKey("polling_stations.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     assigned_by = Column(String(36), nullable=True)
     shift_start = Column(DateTime(timezone=True), nullable=True)
     shift_end = Column(DateTime(timezone=True), nullable=True)

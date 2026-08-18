@@ -1,6 +1,8 @@
 from typing import Optional
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/elections", tags=["Election Management"])
 
 
 from sqlalchemy import inspect
+
 
 def serialize_election(election: Election) -> ElectionResponse:
     settings_data = None

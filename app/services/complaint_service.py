@@ -1,7 +1,9 @@
-from datetime import datetime
 import random
+from datetime import datetime
 from typing import List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.audit import log_audit_event
 from app.core.exceptions import NotFoundException
 from app.models.complaint import Complaint

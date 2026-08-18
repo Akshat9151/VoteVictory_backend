@@ -1,26 +1,25 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
+
 from jinja2 import Template
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.adapters.instagram_adapter import InstagramProviderAdapter
 from app.adapters.sms_adapter import SMSProviderAdapter
 from app.adapters.whatsapp_adapter import WhatsAppProviderAdapter
-from app.core.audit import record_audit_log
 from app.core.exceptions import AppException, ResourceNotFoundException
 from app.models.notification import (
     CampaignStatus,
     DeliveryStatus,
     NotificationCampaign,
     NotificationChannel,
-    NotificationDelivery,
     NotificationRecipient,
     NotificationTemplate,
 )
 from app.models.user import User
-from app.models.voter import Voter, VoterStatus, VotingStatus
-from app.repositories.base import BaseRepository
+from app.models.voter import Voter, VoterStatus
 from app.repositories.notification_repo import NotificationRepository
 from app.schemas.notification import (
     CampaignCreate,
@@ -29,7 +28,6 @@ from app.schemas.notification import (
     DeliveryReportResponse,
     SendMessageRequest,
     TemplateCreate,
-    TemplateResponse,
 )
 
 

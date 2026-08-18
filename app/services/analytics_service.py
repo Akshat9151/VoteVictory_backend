@@ -1,5 +1,6 @@
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Optional
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -7,9 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.models.area import Area, Booth
 from app.models.data_collection import DataSubmission, SubmissionStatus
 from app.models.notification import NotificationCampaign, NotificationChannel
-from app.models.polling_station import PollingStation
-from app.models.voter import Voter, VoterStatus, VotingStatus
 from app.models.volunteer import VolunteerProfile
+from app.models.voter import Voter, VotingStatus
 from app.schemas.analytics import (
     AnalyticsChartsResponse,
     PerformanceDataPoint,
@@ -34,7 +34,7 @@ class AnalyticsService:
             day_date = now - timedelta(days=i)
             day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            
+
             stmt = select(func.count(DataSubmission.id)).where(
                 DataSubmission.created_at >= day_start,
                 DataSubmission.created_at <= day_end,

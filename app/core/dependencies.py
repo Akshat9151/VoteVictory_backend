@@ -1,11 +1,13 @@
 from typing import Callable, List, Optional
-from fastapi import Depends, Header, Request, status
+
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationException, PermissionDeniedException
 from app.core.permissions import PermissionCode, RoleCode
-from app.core.rate_limit import RateLimiter, login_rate_limiter, broadcast_rate_limiter, rate_limiter
+from app.core.rate_limit import broadcast_rate_limiter, login_rate_limiter, rate_limiter
 from app.core.security import decode_access_token
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
@@ -47,17 +49,19 @@ async def get_current_user(
         raise AuthenticationException("Token subject claim is missing.")
 
     user_repo = UserRepository(db)
-    user = await user_repo.get_by_id(user_id)
+    user = await user_repo.get_with_roles(user_id)
     if not user:
-        # Fallback to get_with_roles if available
-        if hasattr(user_repo, "get_with_roles"):
-            user = await user_repo.get_with_roles(user_id)
+        user = await user_repo.get_by_id(user_id)
 
     if not user:
         raise AuthenticationException("User account associated with token no longer exists.")
 
     if not user.is_active:
         raise AuthenticationException("User account is deactivated.")
+
+    # Attach token claims to user object for easy inspection
+    if "role" in payload and not getattr(user, "role", None):
+        setattr(user, "role", payload["role"])
 
     # Cache user on request state for audit logs
     request.state.current_user = user

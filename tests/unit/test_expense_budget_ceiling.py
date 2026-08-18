@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.exceptions import ValidationException
 from app.schemas.expense import ExpenseCreate
 from app.services.expense_service import ExpenseService

@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.exceptions import AuthenticationException
 from app.schemas.auth import LoginRequest
 from app.services.auth_service import AuthService

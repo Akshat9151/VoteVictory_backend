@@ -1,18 +1,18 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, Request
+
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user, require_permissions, require_roles
+from app.core.dependencies import get_optional_current_user, require_permissions
 from app.core.permissions import PermissionCode
 from app.models.organization import Organization
 from app.models.user import User
-from app.models.voter import Voter, VoterStatus, VotingStatus
-from app.schemas.common import APIResponse, PaginatedResponse
+from app.schemas.common import APIResponse
 from app.schemas.voter import (
     AudienceSplit,
     VoterCreate,
-    VoterFilterParams,
     VoterResponse,
     VoterUpdate,
     VoterVerificationRequest,

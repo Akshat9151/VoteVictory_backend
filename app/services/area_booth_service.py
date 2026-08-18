@@ -1,15 +1,14 @@
-from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional
+
 from fastapi import Request
-from sqlalchemy import func, select, desc
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.audit import record_audit_log
 from app.core.exceptions import ResourceNotFoundException
 from app.models.area import Area, Booth, BoothStatus, MapStatus, Ward
-from app.models.election import Constituency, Election
 from app.models.data_collection import DataSubmission, SubmissionStatus
+from app.models.election import Constituency, Election
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.volunteer import VolunteerProfile
@@ -17,15 +16,12 @@ from app.repositories.base import BaseRepository
 from app.schemas.area import (
     AreaCreate,
     AreaOut,
-    AreaUpdate,
     BoothCreate,
     BoothOut,
     BoothStatsOut,
-    BoothUpdate,
     MapMetricsOut,
     WardCreate,
     WardOut,
-    WardUpdate,
 )
 
 

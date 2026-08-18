@@ -1,7 +1,8 @@
-from datetime import datetime
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode
@@ -39,7 +40,7 @@ async def list_audit_logs(
         page=page,
         page_size=page_size
     )
-    items = [AuditLogResponse.model_validate(l) for l in logs]
+    items = [AuditLogResponse.model_validate(log_item) for log_item in logs]
     return APIResponse(data=PaginatedResponse(items=items, pagination=pagination))
 
 

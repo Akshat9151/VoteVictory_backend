@@ -1,6 +1,8 @@
 import enum
+
 from sqlalchemy import Boolean, Column, Date, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
+
 from app.models.base import BaseModel
 
 
@@ -28,7 +30,7 @@ class Voter(BaseModel):
     election_id = Column(String(64), ForeignKey("elections.id", ondelete="CASCADE"), nullable=True, index=True)
     constituency_id = Column(String(64), ForeignKey("constituencies.id", ondelete="SET NULL"), nullable=True, index=True)
     polling_station_id = Column(String(64), ForeignKey("polling_stations.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     name = Column(String(255), nullable=True, index=True)
     voter_id_number = Column(String(100), nullable=True, index=True) # Official EPIC / Voter ID
     first_name = Column(String(100), nullable=True, index=True)
@@ -37,7 +39,7 @@ class Voter(BaseModel):
     date_of_birth = Column(Date, nullable=True)
     age = Column(Integer, nullable=True)
     gender = Column(String(50), nullable=True)
-    
+
     mobile = Column(String(50), nullable=True, index=True)
     phone_number = Column(String(50), nullable=True, index=True)
     email = Column(String(255), nullable=True)
@@ -45,7 +47,7 @@ class Voter(BaseModel):
     house_number = Column(String(100), nullable=True)
     ward = Column(String(100), nullable=True)
     ward_name = Column(String(100), nullable=True)
-    
+
     channel = Column(String(50), default="WhatsApp", nullable=True)
     consent = Column(String(50), default="Verified", nullable=True)
     source = Column(String(100), default="Official Roll", nullable=True)
@@ -53,7 +55,7 @@ class Voter(BaseModel):
     voting_status = Column(Enum(VotingStatus), default=VotingStatus.NOT_VOTED, nullable=True, index=True)
     has_voted = Column(Boolean, default=False, nullable=False, index=True)
     voted_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     is_opt_out_notifications = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)
 

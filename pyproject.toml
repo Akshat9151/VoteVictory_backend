@@ -48,3 +48,44 @@ testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+
+[tool.ruff]
+line-length = 120
+
+target-version = "py312"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".environment",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "alembic",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "E402", "F401", "F841", "E712", "E711", "W291", "W292", "W293", "F541", "E741", "F811"]
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "alembic",
+    "build",
+    "dist",
+]

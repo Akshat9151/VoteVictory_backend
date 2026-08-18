@@ -75,7 +75,5 @@ exclude = [
     "venv",
     "alembic",
 ]
-
-[tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = ["E501", "E402", "F401", "F841", "E712", "E711", "W291", "W292", "W293", "F541", "E741", "F811"]

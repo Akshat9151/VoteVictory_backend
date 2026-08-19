@@ -75,6 +75,14 @@ class Settings(BaseSettings):
 
     # Notification Providers
     SMS_PROVIDER: str = "mock" # mock | twilio | msg91 | aws_sns
+    EMAIL_PROVIDER: str = "mock" # mock | smtp
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@votingplatform.org"
+    OTP_EXPIRE_MINUTES: int = 15
+    OTP_MAX_ATTEMPTS: int = 5
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""

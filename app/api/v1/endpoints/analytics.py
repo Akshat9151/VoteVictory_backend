@@ -52,22 +52,10 @@ async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -
             calls=getattr(v, "callsMade", 300) or 300,
         )
         for v in volunteers
-    ] or [
-        VolunteerProductivityItem(name="Kailash Saini", slips=540, calls=320),
-        VolunteerProductivityItem(name="Priya Sharma", slips=680, calls=480),
-        VolunteerProductivityItem(name="Mukesh Gurjar", slips=420, calls=290),
-        VolunteerProductivityItem(name="Mahesh Sharma", slips=390, calls=210),
     ]
 
     return AnalyticsData(
-        wardCoverage=[
-            WardCoverageItem(ward="Ward 01", percentage=78),
-            WardCoverageItem(ward="Ward 02", percentage=86),
-            WardCoverageItem(ward="Ward 03", percentage=64),
-            WardCoverageItem(ward="Ward 04", percentage=94),
-            WardCoverageItem(ward="Ward 05", percentage=72),
-            WardCoverageItem(ward="Ward 06", percentage=81),
-        ],
+        wardCoverage=[],
         channelDelivery=[
             ChannelDeliveryItem(channel="WhatsApp", count=whatsapp_count or 2850, color="#059669"),
             ChannelDeliveryItem(channel="SMS Fallback", count=sms_count or 612, color="#0284c7"),

@@ -227,6 +227,24 @@ class VoterService:
         )
         return updated
 
+    async def delete_voter(self, request: Request, voter_id: str, current_user: User) -> bool:
+        voter = await self.get_voter(voter_id)
+        if current_user.organization_id and voter.organization_id != current_user.organization_id:
+            from app.core.exceptions import PermissionDeniedException
+            raise PermissionDeniedException(message="Cannot delete a voter from another organization.")
+
+        await self.db.delete(voter)
+        await self.db.commit()
+        await record_audit_log(
+            self.db,
+            request,
+            action="voter.delete",
+            resource_type="voter",
+            resource_id=voter.id,
+            current_user=current_user,
+        )
+        return True
+
     async def verify_voter(
         self,
         request: Request,

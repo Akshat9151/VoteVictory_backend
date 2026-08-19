@@ -15,6 +15,7 @@ class UserRepository(BaseRepository[User]):
     async def get_by_email(self, email: str) -> Optional[User]:
         stmt = (
             select(User)
+            .execution_options(populate_existing=True)
             .options(
                 selectinload(User.roles).selectinload(UserRole.role).selectinload(Role.permissions).selectinload(RolePermission.permission)
             )
@@ -27,6 +28,7 @@ class UserRepository(BaseRepository[User]):
         cleaned = phone.strip()
         stmt = (
             select(User)
+            .execution_options(populate_existing=True)
             .options(
                 selectinload(User.roles).selectinload(UserRole.role).selectinload(Role.permissions).selectinload(RolePermission.permission)
             )
@@ -38,6 +40,7 @@ class UserRepository(BaseRepository[User]):
     async def get_first_user(self) -> Optional[User]:
         stmt = (
             select(User)
+            .execution_options(populate_existing=True)
             .options(
                 selectinload(User.roles).selectinload(UserRole.role).selectinload(Role.permissions).selectinload(RolePermission.permission)
             )

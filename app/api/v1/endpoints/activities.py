@@ -6,6 +6,8 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user, require_roles
+from app.models.user import User
 from app.models.activity import ActivityStatus, AttendanceStatus, FieldActivityLog, VolunteerAttendanceRecord
 from app.schemas.activity import (
     ActivityStatusUpdate,
@@ -24,6 +26,7 @@ async def list_field_activities(
     ward: Optional[str] = Query(None),
     activity_type: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
     """List real-time ground field activities with photo evidence."""
@@ -34,6 +37,8 @@ async def list_field_activities(
         stmt = stmt.where(FieldActivityLog.activity_type == activity_type)
     if status_filter and status_filter != "all":
         stmt = stmt.where(FieldActivityLog.status == status_filter)
+    if _is_volunteer(current_user):
+        stmt = stmt.where(FieldActivityLog.volunteer_id == current_user.id)
     stmt = stmt.order_by(desc(FieldActivityLog.created_at))
 
     result = await db.execute(stmt)
@@ -44,12 +49,13 @@ async def list_field_activities(
 @router.post("/field-activities/submit", response_model=FieldActivityResponse, status_code=status.HTTP_201_CREATED)
 async def submit_field_activity(
     activity_in: FieldActivityCreate,
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
     """Submit ground field activity report with photos, reach count and location."""
     activity = FieldActivityLog(
-        volunteer_id=activity_in.volunteer_id,
-        volunteer_name=activity_in.volunteer_name or "Field Volunteer",
+        volunteer_id=current_user.id if _is_volunteer(current_user) else activity_in.volunteer_id,
+        volunteer_name=activity_in.volunteer_name or f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "Field Volunteer",
         ward=activity_in.ward,
         booth_no=activity_in.booth_no,
         activity_type=activity_in.activity_type,
@@ -72,6 +78,7 @@ async def submit_field_activity(
 async def update_field_activity_status(
     id: str,
     status_in: ActivityStatusUpdate,
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
     """Update field activity verification status (Approved, Rejected, Verified, Flagged)."""
@@ -90,10 +97,21 @@ async def update_field_activity_status(
     return activity
 
 
+def _is_volunteer(current_user: User) -> bool:
+    if getattr(current_user, "is_superuser", False):
+        return False
+    for user_role in getattr(current_user, "roles", []) or []:
+        role = getattr(getattr(user_role, "role", None), "code", "") or ""
+        if role.upper() == "VOLUNTEER":
+            return True
+    return False
+
+
 # Volunteer Attendance (Section 7.7)
 @router.get("/attendance", response_model=List[AttendanceResponse])
 async def list_attendance(
     date_filter: Optional[str] = Query(None, alias="date"),
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
     """Fetch volunteer daily attendance and field check-in logs."""
@@ -109,6 +127,7 @@ async def list_attendance(
 @router.post("/attendance/check-in", response_model=AttendanceResponse, status_code=status.HTTP_201_CREATED)
 async def record_check_in(
     checkin_in: AttendanceCheckInRequest,
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
     """Record 1-click volunteer daily check-in with GPS/booth location."""

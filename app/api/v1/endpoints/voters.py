@@ -157,6 +157,18 @@ async def update_voter(
     )
 
 
+@router.delete("/{voter_id}", response_model=APIResponse[bool])
+async def delete_voter(
+    request: Request,
+    voter_id: str,
+    current_user: User = Depends(require_permissions(PermissionCode.VOTER_UPDATE.value)),
+    db: AsyncSession = Depends(get_db)
+):
+    service = VoterService(db)
+    await service.delete_voter(request, voter_id, current_user)
+    return APIResponse(success=True, message="Voter record deleted.", data=True)
+
+
 @router.post("/{voter_id}/verify", response_model=APIResponse[VoterVerificationResponse])
 async def verify_voter(
     request: Request,

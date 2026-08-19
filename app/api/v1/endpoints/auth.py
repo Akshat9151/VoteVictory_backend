@@ -10,7 +10,10 @@ from app.schemas.auth import (
     MFAVerifyRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
+    OtpChallengeResponse,
+    OtpVerifyRequest,
     RefreshTokenRequest,
+    SignupOtpRequest,
     TokenResponse,
     UserRegisterRequest,
 )
@@ -69,8 +72,8 @@ async def login(
     )
 
 
-@router.post("/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
-@router.post("/signup", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=APIResponse[TokenResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=APIResponse[TokenResponse], status_code=status.HTTP_201_CREATED)
 async def register(
     request: Request,
     reg_data: UserRegisterRequest,
@@ -78,12 +81,40 @@ async def register(
 ):
     """Public user onboarding and campaign account registration."""
     service = AuthService(db)
-    user = await service.register_user(request, reg_data)
+    token_response = await service.onboard_user(request, reg_data)
     return APIResponse(
         success=True,
-        message="User account successfully created.",
-        data=serialize_user(user)
+        message="Workspace and Super Admin account created.",
+        data=token_response
     )
+
+
+@router.post("/signup/request-otp", response_model=APIResponse[OtpChallengeResponse])
+async def request_signup_otp(data: SignupOtpRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    challenge = await service.request_signup_otp(data)
+    return APIResponse(success=True, message="Verification code sent.", data=challenge)
+
+
+@router.post("/signup/verify-otp", response_model=APIResponse[TokenResponse], status_code=status.HTTP_201_CREATED)
+async def verify_signup_otp(request: Request, data: OtpVerifyRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    token_response = await service.verify_signup_otp(request, data.challenge_id, data.code)
+    return APIResponse(success=True, message="Workspace and Super Admin account created.", data=token_response)
+
+
+@router.post("/login/request-otp", response_model=APIResponse[OtpChallengeResponse])
+async def request_login_otp(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    challenge = await service.request_login_otp(data.email or "", data.password or "")
+    return APIResponse(success=True, message="Verification code sent.", data=challenge)
+
+
+@router.post("/login/verify-otp", response_model=APIResponse[TokenResponse])
+async def verify_login_otp(request: Request, data: OtpVerifyRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    token_response = await service.verify_login_otp(request, data.challenge_id, data.code)
+    return APIResponse(success=True, message="Authentication successful.", data=token_response)
 
 
 @router.post("/forgot-password", response_model=APIResponse[bool])

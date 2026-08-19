@@ -30,12 +30,15 @@ class UserService:
         if existing:
             raise DuplicateResourceException("User", "email", user_in.email)
 
-        # Enforce Org Scope: Non-superusers can only create users in their own org
-        org_id = target_org_id or user_in.organization_id or current_user.organization_id
-        if not current_user.is_superuser:
-            org_id = current_user.organization_id
-            if user_in.role_code == RoleCode.SUPER_ADMIN.value:
-                raise PermissionDeniedException(message="Only Super Admin can assign the SUPER_ADMIN role.")
+        requested_role = user_in.role_code.upper().strip()
+        if current_user.is_superuser:
+            if requested_role not in {RoleCode.ADMIN.value, RoleCode.VOLUNTEER.value}:
+                raise PermissionDeniedException(message="Super Admin can create Admin or Volunteer accounts.")
+        elif requested_role != RoleCode.VOLUNTEER.value:
+            raise PermissionDeniedException(message="Admin can create only Volunteer accounts.")
+
+        # Enforce organization scope for every account created from Team.
+        org_id = current_user.organization_id
 
         user = User(
             email=user_in.email.lower().strip(),
@@ -46,16 +49,17 @@ class UserService:
             password_hash=get_password_hash(user_in.password),
             is_active=user_in.is_active,
             is_verified=True,
-            is_superuser=(user_in.role_code == RoleCode.SUPER_ADMIN.value and current_user.is_superuser)
+            is_superuser=False
         )
         user = await self.user_repo.create(user)
 
         # Bind Role
-        role = await self.user_repo.get_role_by_code(user_in.role_code)
-        if role:
-            user_role = UserRole(user_id=user.id, role_id=role.id)
-            self.db.add(user_role)
-            await self.db.flush()
+        role = await self.user_repo.get_role_by_code(requested_role)
+        if not role:
+            raise ResourceNotFoundException("Role", requested_role)
+        user_role = UserRole(user_id=user.id, role_id=role.id)
+        self.db.add(user_role)
+        await self.db.flush()
 
         await record_audit_log(
             self.db,
@@ -64,7 +68,7 @@ class UserService:
             resource_type="user",
             resource_id=user.id,
             current_user=current_user,
-            new_state={"email": user.email, "role": user_in.role_code, "org_id": org_id}
+            new_state={"email": user.email, "role": requested_role, "org_id": org_id}
         )
 
         return await self.user_repo.get_with_roles(user.id)
@@ -78,18 +82,21 @@ class UserService:
         search: Optional[str] = None
     ) -> Tuple[List[User], PaginationMeta]:
         filters = {}
-        if not current_user.is_superuser:
-            filters["organization_id"] = current_user.organization_id
-        elif org_id:
-            filters["organization_id"] = org_id
+        filters["organization_id"] = current_user.organization_id
 
-        return await self.user_repo.list_paginated(
+        users, pagination = await self.user_repo.list_paginated(
             page=page,
             page_size=page_size,
             filters=filters,
             search_query=search,
             search_fields=["first_name", "last_name", "email", "phone"]
         )
+        hydrated_users = []
+        for user in users:
+            hydrated = await self.user_repo.get_with_roles(user.id)
+            if hydrated:
+                hydrated_users.append(hydrated)
+        return hydrated_users, pagination
 
     async def get_user(self, user_id: str, current_user: User) -> User:
         user = await self.user_repo.get_with_roles(user_id)

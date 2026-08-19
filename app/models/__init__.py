@@ -18,6 +18,7 @@ from app.models.data_collection import (
     SubmissionStatus,
 )
 from app.models.design_template import DesignTemplate
+from app.models.saved_design import SavedDesign
 from app.models.election import (
     Constituency,
     Election,

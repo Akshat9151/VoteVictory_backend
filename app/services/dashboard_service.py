@@ -45,11 +45,11 @@ class DashboardService:
         user_count = len((await self.db.execute(select(User))).scalars().all())
         elections = (await self.db.execute(select(Election))).scalars().all()
         active_elec = sum(1 for e in elections if e.status == ElectionStatus.LIVE)
-        comp_elec = sum(1 for e in elections if e.status == ElectionStatus.COMPLETED)
+        comp_elec = sum(1 for e in elections if e.status == ElectionStatus.CLOSED)
         voters = (await self.db.execute(select(Voter))).scalars().all()
-        total_voters = len(voters) or 3500
+        total_voters = len(voters)
         candidates = (await self.db.execute(select(Candidate))).scalars().all()
-        total_candidates = len(candidates) or 12
+        total_candidates = len(candidates)
 
         audit_stmt = select(AuditLog).order_by(desc(AuditLog.created_at)).limit(10)
         logs = (await self.db.execute(audit_stmt)).scalars().all()
@@ -67,22 +67,18 @@ class DashboardService:
         ]
 
         return SuperAdminDashboardResponse(
-            total_organizations=org_count or 1,
-            active_organizations=org_count or 1,
-            total_users=user_count or 6,
-            active_elections=active_elec or len(elections) or 1,
+            total_organizations=org_count,
+            active_organizations=org_count,
+            total_users=user_count,
+            active_elections=active_elec,
             completed_elections=comp_elec,
             total_candidates=total_candidates,
             total_voters=total_voters,
             total_voters_registered=total_voters,
             total_votes_processed=sum(1 for v in voters if getattr(v, "has_voted", False) or getattr(v, "voting_status", None) == VotingStatus.VOTED),
-            total_broadcasts_sent=4850,
+            total_broadcasts_sent=0,
             recent_audit_logs=[{"id": l.id, "action": l.action, "time": l.created_at.isoformat() if l.created_at else ""} for l in logs],
-            recent_activity=recent_activity or [
-                {"title": "Candidate nomination approved", "time": "10m ago", "actor": "Super Admin"},
-                {"title": "Electoral roll batch uploaded (500 records)", "time": "1h ago", "actor": "Admin"},
-                {"title": "WhatsApp campaign dispatched to Ward 04", "time": "3h ago", "actor": "System"},
-            ],
+            recent_activity=recent_activity,
         )
 
     async def get_admin_dashboard(
@@ -95,15 +91,15 @@ class DashboardService:
         if organization_id:
             vol_stmt = vol_stmt.where(VolunteerProfile.organization_id == organization_id)
         volunteers = (await self.db.execute(vol_stmt)).scalars().all()
-        total_volunteers = len(volunteers) or 24
-        active_volunteers = sum(1 for v in volunteers if v.status == "ACTIVE") or total_volunteers
+        total_volunteers = len(volunteers)
+        active_volunteers = sum(1 for v in volunteers if v.status == "ACTIVE")
 
         # Voters count
         voter_stmt = select(Voter)
         if organization_id:
             voter_stmt = voter_stmt.where(Voter.organization_id == organization_id)
         voters = (await self.db.execute(voter_stmt)).scalars().all()
-        total_voters = len(voters) or 3500
+        total_voters = len(voters)
 
         # Data collection & quality
         sub_stmt = select(DataSubmission).options(selectinload(DataSubmission.volunteer))
@@ -125,7 +121,7 @@ class DashboardService:
         pending_rec = sum(1 for s in submissions if s.status in [SubmissionStatus.SUBMITTED, SubmissionStatus.UNDER_REVIEW])
         rejected_rec = sum(1 for s in submissions if s.status == SubmissionStatus.REJECTED)
         dup_rec = sum(1 for s in submissions if s.status == SubmissionStatus.DUPLICATE or s.is_flagged_duplicate)
-        avg_quality = round(sum(s.quality_score for s in submissions) / total_collected, 2) if total_collected > 0 else 100.0
+        avg_quality = round(sum(s.quality_score for s in submissions) / total_collected, 2) if total_collected > 0 else 0.0
 
         # Campaigns
         camp_stmt = select(NotificationCampaign)
@@ -134,8 +130,8 @@ class DashboardService:
         campaigns = (await self.db.execute(camp_stmt)).scalars().all()
 
         active_campaigns = sum(1 for c in campaigns if c.status in ["QUEUED", "PROCESSING"])
-        sms_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.SMS) or 650
-        whatsapp_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.WHATSAPP) or 2850
+        sms_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.SMS)
+        whatsapp_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.WHATSAPP)
         email_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.EMAIL)
         ig_sent = sum(c.sent_count for c in campaigns if c.channel == NotificationChannel.INSTAGRAM)
         messages_sent_this_week = sms_sent + whatsapp_sent
@@ -175,14 +171,7 @@ class DashboardService:
                 )
             )
 
-        ward_coverage = [
-            {"ward": "Ward 01", "coverage": 78, "voters": 580},
-            {"ward": "Ward 02", "coverage": 86, "voters": 620},
-            {"ward": "Ward 03", "coverage": 64, "voters": 510},
-            {"ward": "Ward 04", "coverage": 94, "voters": 850},
-            {"ward": "Ward 05", "coverage": 72, "voters": 480},
-            {"ward": "Ward 06", "coverage": 81, "voters": 460},
-        ]
+        ward_coverage = []
 
         # Booth collection progress
         booth_stmt = select(Booth)
@@ -222,7 +211,7 @@ class DashboardService:
             total_volunteers=total_volunteers,
             active_volunteers=active_volunteers,
             total_voters=total_voters,
-            total_data_collected=total_collected or total_voters,
+            total_data_collected=total_collected,
             today_data_collected=today_col,
             weekly_data_collected=week_col,
             monthly_data_collected=month_col,
@@ -246,19 +235,19 @@ class DashboardService:
 
     async def get_volunteer_dashboard(self, current_user: User) -> VolunteerDashboardResponse:
         return VolunteerDashboardResponse(
-            volunteer_name=f"{current_user.first_name} {current_user.last_name}".strip() or "Field Volunteer",
-            volunteer_code="VOL-02",
-            assigned_election_title="Gram Panchayat Rampur 2026",
-            assigned_station_name="Booth 02 (Community Hall)",
-            assigned_booth_number="Booth 02",
-            assigned_area_name="Ward 02 – Patel Basti",
-            daily_target=200,
-            daily_collection=145,
-            achievement_percentage=72.5,
-            remaining_target=55,
-            total_submissions=450,
-            approved_count=430,
-            rejected_count=12,
-            duplicate_count=8,
-            rank_in_org=2,
+            volunteer_name=f"{current_user.first_name} {current_user.last_name}".strip(),
+            volunteer_code="",
+            assigned_election_title="",
+            assigned_station_name="",
+            assigned_booth_number="",
+            assigned_area_name="",
+            daily_target=0,
+            daily_collection=0,
+            achievement_percentage=0,
+            remaining_target=0,
+            total_submissions=0,
+            approved_count=0,
+            rejected_count=0,
+            duplicate_count=0,
+            rank_in_org=0,
         )

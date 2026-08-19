@@ -3,6 +3,7 @@ import json
 import os
 
 import pandas as pd
+from pypdf import PdfReader
 from fastapi import Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,30 +32,77 @@ class BulkImportService:
         # Validate extension
         filename = file.filename or "upload.csv"
         ext = os.path.splitext(filename)[1].lower()
-        if ext not in [".csv", ".xlsx", ".xls"]:
-            raise AppException(code="INVALID_FILE_TYPE", message="Only CSV and Excel (.xlsx, .xls) files are supported.")
+        if ext not in [".csv", ".xlsx", ".xls", ".pdf"]:
+            raise AppException(code="INVALID_FILE_TYPE", message="Only CSV, Excel, and text-based PDF voter rolls are supported.")
 
         content = await file.read()
         file_size = len(content)
 
-        # Parse with Pandas
-        try:
-            if ext == ".csv":
-                df = pd.read_csv(io.BytesIO(content))
-            else:
-                df = pd.read_excel(io.BytesIO(content))
-        except Exception as e:
-            raise AppException(code="FILE_PARSING_ERROR", message=f"Failed to parse uploaded spreadsheet: {str(e)}")
+        df = None
+        pdf_records = []
+        if ext == ".pdf":
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                text = "\n".join(page.extract_text() or "" for page in reader.pages)
+            except Exception as e:
+                raise AppException(code="FILE_PARSING_ERROR", message=f"Failed to read PDF: {str(e)}")
+            pdf_records = self._parse_pdf_rows(text)
+            if not pdf_records:
+                raise AppException(
+                    code="PDF_TEXT_NOT_FOUND",
+                    message="No voter rows could be read from this PDF. Upload a text-based electoral roll PDF or export it as CSV.",
+                )
+        else:
+            try:
+                if ext == ".csv":
+                    df = pd.read_csv(io.BytesIO(content))
+                else:
+                    df = pd.read_excel(io.BytesIO(content))
+            except Exception as e:
+                raise AppException(code="FILE_PARSING_ERROR", message=f"Failed to parse uploaded spreadsheet: {str(e)}")
 
-        df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+            df.columns = [self._normalize_column_name(c) for c in df.columns]
+            aliases = {
+                "epic_no": "voter_id_number",
+                "epic_number": "voter_id_number",
+                "epic_id": "voter_id_number",
+                "voter_id": "voter_id_number",
+                "voter_id_no": "voter_id_number",
+                "id_number": "voter_id_number",
+                "serial_no": "voter_id_number",
+                "serial_number": "voter_id_number",
+                "s_no": "voter_id_number",
+                "sr_no": "voter_id_number",
+                "no": "voter_id_number",
+                "elector_name": "first_name",
+                "voter_name": "first_name",
+                "full_name": "first_name",
+                "electors_name": "first_name",
+                "surname": "last_name",
+                "family_name": "last_name",
+                "father_name": "father_or_spouse_name",
+                "husband_name": "father_or_spouse_name",
+                "father_husband_name": "father_or_spouse_name",
+                "relative_name": "father_or_spouse_name",
+                "sex": "gender",
+                "mobile": "phone_number",
+                "mobile_number": "phone_number",
+                "phone": "phone_number",
+                "contact_number": "phone_number",
+                "house_no": "house_number",
+                "address_line": "address",
+                "ward": "ward_name",
+                "ward_no": "ward_name",
+            }
+            df = df.rename(columns={column: aliases.get(column, column) for column in df.columns})
 
-        required_columns = ["voter_id_number", "first_name", "last_name"]
-        missing_cols = [col for col in required_columns if col not in df.columns]
-        if missing_cols:
-            raise AppException(
-                code="MISSING_COLUMNS",
-                message=f"Missing required columns in header: {', '.join(missing_cols)}"
-            )
+            required_columns = ["voter_id_number", "first_name"]
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                raise AppException(
+                    code="MISSING_COLUMNS",
+                    message=f"Missing required columns in header: {', '.join(missing_cols)}"
+                )
 
         # Create ImportJob
         job = ImportJob(
@@ -78,11 +126,19 @@ class BulkImportService:
         duplicate_count = 0
         invalid_count = 0
 
-        for idx, row in df.iterrows():
+        source_rows = enumerate(pdf_records) if ext == ".pdf" else df.iterrows()
+        total_rows = len(pdf_records) if ext == ".pdf" else len(df)
+        for idx, row in source_rows:
             row_num = idx + 2 # Excel row index
             raw_voter_id = str(row.get("voter_id_number", "")).strip().upper()
             first_name = str(row.get("first_name", "")).strip()
             last_name = str(row.get("last_name", "")).strip()
+            if last_name == "NAN":
+                last_name = ""
+            if first_name and " " in first_name and not last_name:
+                name_parts = first_name.split()
+                first_name = name_parts[0]
+                last_name = " ".join(name_parts[1:])
 
             if not raw_voter_id or raw_voter_id == "NAN":
                 err = ImportError(
@@ -125,7 +181,7 @@ class BulkImportService:
             valid_records.append({
                 "voter_id_number": raw_voter_id,
                 "first_name": first_name,
-                "last_name": last_name if last_name != "NAN" else "",
+                "last_name": last_name,
                 "father_or_spouse_name": str(row.get("father_or_spouse_name", "")) if pd.notna(row.get("father_or_spouse_name")) else None,
                 "age": int(row["age"]) if "age" in row and pd.notna(row["age"]) and str(row["age"]).isdigit() else None,
                 "gender": str(row.get("gender", "")) if pd.notna(row.get("gender")) else None,
@@ -139,7 +195,7 @@ class BulkImportService:
         for err in import_errors:
             self.db.add(err)
 
-        job.total_rows = len(df)
+        job.total_rows = total_rows
         job.valid_rows = len(valid_records)
         job.duplicate_rows = duplicate_count
         job.invalid_rows = invalid_count
@@ -161,7 +217,7 @@ class BulkImportService:
         return ImportPreviewResponse(
             job_id=job.id,
             file_name=filename,
-            total_rows=len(df),
+            total_rows=total_rows,
             valid_count=len(valid_records),
             duplicate_count=duplicate_count,
             invalid_count=invalid_count,
@@ -176,6 +232,53 @@ class BulkImportService:
                 for e in import_errors[:10]
             ]
         )
+
+    @staticmethod
+    def _normalize_column_name(value: object) -> str:
+        import re
+
+        normalized = str(value).strip().lower()
+        normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")
+        return normalized
+
+    @staticmethod
+    def _parse_pdf_rows(text: str) -> list[dict]:
+        """Parse common text-based electoral-roll lines into the import schema."""
+        import re
+
+        records = []
+        voter_id_pattern = re.compile(r"\b[A-Z]{2,5}[0-9]{5,}|\b[0-9]{6,16}\b")
+        phone_pattern = re.compile(r"\b(?:\+?91[- ]?)?[6-9][0-9]{9}\b")
+        age_pattern = re.compile(r"\b(?:age|उम्र|वय)\s*[:=-]?\s*(\d{1,3})\b", re.IGNORECASE)
+        gender_pattern = re.compile(r"\b(MALE|FEMALE|OTHER|पुरुष|महिला|अन्य|M|F)\b", re.IGNORECASE)
+        for raw_line in text.splitlines():
+            line = " ".join(raw_line.split())
+            if not line:
+                continue
+            voter_match = voter_id_pattern.search(line.upper())
+            if not voter_match:
+                continue
+            voter_id = voter_match.group(0)
+            before_id = line[:voter_match.start()].strip(" -:|,.")
+            after_id = line[voter_match.end():].strip(" -:|,.")
+            name_text = after_id if before_id.isdigit() else (before_id or after_id)
+            name_text = re.sub(r"^(?:name|नाम|मतदाता)\s*[:=-]?\s*", "", name_text, flags=re.IGNORECASE).strip()
+            name_text = re.split(r"\b(?:age|उम्र|वय|male|female|पुरुष|महिला|other|अन्य)\b", name_text, maxsplit=1, flags=re.IGNORECASE)[0].strip(" -:|,.")
+            name_parts = name_text.split()
+            if not name_parts:
+                continue
+            age_match = age_pattern.search(line)
+            gender_match = gender_pattern.search(line)
+            phone_match = phone_pattern.search(line)
+            records.append({
+                "voter_id_number": voter_id,
+                "first_name": name_parts[0],
+                "last_name": " ".join(name_parts[1:]),
+                "age": int(age_match.group(1)) if age_match else None,
+                "gender": gender_match.group(1) if gender_match else None,
+                "phone_number": phone_match.group(0) if phone_match else None,
+            })
+        return records
 
     async def confirm_bulk_import(
         self,

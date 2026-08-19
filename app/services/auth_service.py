@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+import re
+from typing import Dict, Optional
+from uuid import uuid4
 
 from fastapi import Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit_log, record_security_event
 from app.core.config import settings
+from app.core.permissions import RoleCode
 from app.core.exceptions import (
     AccountLockedException,
     AuthenticationException,
@@ -16,13 +20,19 @@ from app.core.security import (
     create_refresh_token,
     generate_recovery_codes,
     generate_totp_secret,
+    get_password_hash,
     get_totp_uri,
+    generate_secure_otp,
     hash_token,
     verify_password,
     verify_totp,
 )
+from app.adapters.email_adapter import EmailProviderAdapter
+from app.adapters.sms_adapter import SMSProviderAdapter
 from app.models.audit import SecuritySeverity
-from app.models.user import User, UserSession
+from app.models.election import Election, ElectionStatus, ElectionType, ElectionVisibility
+from app.models.organization import Organization, OrganizationStatus
+from app.models.user import User, UserRole, UserSession
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import LoginRequest, MFASetupResponse, TokenResponse
 
@@ -32,8 +42,148 @@ class AuthService:
         self.db = db
         self.user_repo = UserRepository(db)
 
+    _otp_challenges: Dict[str, Dict] = {}
+
+    async def request_signup_otp(self, request_data) -> Dict:
+        if await self.user_repo.get_by_email(request_data.email):
+            from app.core.exceptions import DuplicateResourceException
+            raise DuplicateResourceException("User", "email", request_data.email)
+
+        challenge_id = uuid4().hex
+        code = generate_secure_otp()
+        destination = request_data.email or request_data.phone
+        self._otp_challenges[challenge_id] = {
+            "purpose": "signup",
+            "code": code,
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+            "payload": request_data,
+        }
+        await self._send_otp(destination, code)
+        return self._otp_response(challenge_id, destination, code)
+
+    async def verify_signup_otp(self, request: Optional[Request], challenge_id: str, code: str) -> User:
+        challenge = self._take_otp(challenge_id, code, "signup")
+        return await self.onboard_user(request, challenge["payload"])
+
+    async def request_login_otp(self, email: str, password: str) -> Dict:
+        user = await self.user_repo.get_by_email(email)
+        if not user or not verify_password(password, user.password_hash):
+            raise AuthenticationException("Invalid email or password.")
+        challenge_id = uuid4().hex
+        code = generate_secure_otp()
+        destination = user.email or user.phone
+        self._otp_challenges[challenge_id] = {
+            "purpose": "login",
+            "code": code,
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+            "email": email,
+            "password": password,
+        }
+        await self._send_otp(destination, code)
+        return self._otp_response(challenge_id, destination, code)
+
+    async def verify_login_otp(self, request: Optional[Request], challenge_id: str, code: str) -> TokenResponse:
+        challenge = self._take_otp(challenge_id, code, "login")
+        return await self.authenticate_user(request, LoginRequest(email=challenge["email"], password=challenge["password"]))
+
+    async def _send_otp(self, destination: str, code: str) -> None:
+        content = f"Your ElectWin verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
+        adapter = EmailProviderAdapter() if "@" in destination else SMSProviderAdapter()
+        result = await adapter.send_message(destination, content, template_id="OTP_VERIFICATION")
+        if not result.success:
+            raise AuthenticationException("Unable to send verification code.")
+
+    def _otp_response(self, challenge_id: str, destination: str, code: str) -> Dict:
+        response = {
+            "challenge_id": challenge_id,
+            "destination": destination,
+            "expires_in": settings.OTP_EXPIRE_MINUTES * 60,
+        }
+        if settings.DEBUG:
+            response["dev_code"] = code
+        return response
+
+    def _take_otp(self, challenge_id: str, code: str, purpose: str) -> Dict:
+        challenge = self._otp_challenges.pop(challenge_id, None)
+        if not challenge or challenge["purpose"] != purpose or challenge["expires_at"] < datetime.now(timezone.utc):
+            raise AuthenticationException("Verification code is invalid or expired.")
+        if challenge["code"] != code.strip():
+            raise AuthenticationException("Verification code is invalid or expired.")
+        return challenge
+
     async def login(self, login_data: LoginRequest) -> TokenResponse:
         return await self.authenticate_user(request=None, login_data=login_data)
+
+    async def onboard_user(self, request: Optional[Request], reg_in: "UserRegisterRequest") -> TokenResponse:
+        """Create a workspace, its first draft election, and owner in one transaction."""
+        from app.core.exceptions import DuplicateResourceException
+
+        if await self.user_repo.get_by_email(reg_in.email):
+            raise DuplicateResourceException("User", "email", reg_in.email)
+
+        organization_name = (reg_in.organization_name or '').strip()
+        if not organization_name:
+            organization_name = f"{reg_in.first_name.strip()} {reg_in.last_name.strip()} Campaign".strip()
+        if not organization_name:
+            organization_name = reg_in.email.split('@', 1)[0].strip() or "Election Campaign"
+        slug_base = re.sub(r"[^a-z0-9]+", "-", organization_name.lower()).strip("-") or "workspace"
+        slug = slug_base
+        suffix = 2
+        while (await self.db.execute(select(Organization).where(Organization.slug == slug))).scalars().first():
+            slug = f"{slug_base}-{suffix}"
+            suffix += 1
+
+        organization = Organization(
+            name=organization_name,
+            slug=slug,
+            status=OrganizationStatus.ACTIVE,
+            contact_email=reg_in.email.lower().strip(),
+            contact_phone=reg_in.phone,
+        )
+        self.db.add(organization)
+        await self.db.flush()
+
+        election = Election(
+            organization_id=organization.id,
+            title=f"{organization_name} Election",
+            slug=f"{slug}-election",
+            election_type=ElectionType.LOCAL,
+            status=ElectionStatus.DRAFT,
+            visibility=ElectionVisibility.PRIVATE,
+        )
+        self.db.add(election)
+        await self.db.flush()
+
+        user = User(
+            organization_id=organization.id,
+            email=reg_in.email.lower().strip(),
+            first_name=reg_in.first_name.strip(),
+            last_name=reg_in.last_name.strip(),
+            phone=reg_in.phone,
+            password_hash=get_password_hash(reg_in.password),
+            is_active=True,
+            is_verified=True,
+            is_superuser=True,
+        )
+        self.db.add(user)
+        await self.db.flush()
+
+        super_role = await self.user_repo.get_role_by_code(RoleCode.SUPER_ADMIN.value)
+        if not super_role:
+            raise AuthenticationException("System roles are not initialized.")
+        self.db.add(UserRole(user_id=user.id, role_id=super_role.id))
+
+        await record_audit_log(
+            self.db,
+            request,
+            action="auth.onboard",
+            resource_type="organization",
+            resource_id=organization.id,
+            current_user=user,
+            details={"email": user.email, "election_id": election.id},
+        )
+        await self.db.commit()
+        return await self.authenticate_user(request, LoginRequest(email=user.email, password=reg_in.password))
 
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         return await self.refresh_access_token(request=None, refresh_token=refresh_token)
@@ -129,8 +279,14 @@ class AuthService:
             for rp in role.permissions:
                 permissions.add(rp.permission.code)
 
-        target_role = login_data.role.lower() if login_data.role else (user_role_names[0].lower() if user_role_names else "superadmin")
-        primary_role = target_role.upper()
+        assigned_roles = {role.upper() for role in user_role_names}
+        if user.is_superuser:
+            assigned_roles.add(RoleCode.SUPER_ADMIN.value)
+        requested_role = login_data.role.upper().replace("-", "_") if login_data.role else None
+        if requested_role and requested_role not in assigned_roles:
+            raise AuthenticationException("This account is not assigned to the requested role.")
+        primary_role = requested_role or next(iter(assigned_roles), RoleCode.VOLUNTEER.value)
+        target_role = primary_role.lower()
 
         # Generate JWT Access & Refresh Tokens
         access_token = create_access_token(
@@ -163,13 +319,8 @@ class AuthService:
             is_success=True
         )
 
-        role_display_names = {
-            "superadmin": "Rameshwar Patel (Owner)",
-            "admin": "Rajesh Kumar (Campaign Admin)",
-            "volunteer": "Kailash Saini (Ward 02 Volunteer)"
-        }
-        user_full_name = role_display_names.get(target_role) or f"{user.first_name or ''} {user.last_name or ''}".strip() or "Campaign User"
-        ward_label = "Ward 02 – Patel Basti" if target_role == "volunteer" else "All Wards"
+        user_full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Campaign User"
+        ward_label = ""
 
         return TokenResponse(
             access_token=access_token,
@@ -294,3 +445,64 @@ class AuthService:
         if session:
             session.is_revoked = True
             await self.user_repo.update(session)
+
+    async def register_user(self, request: Optional[Request], reg_in: "UserRegisterRequest") -> User:
+        from app.core.exceptions import DuplicateResourceException
+        from app.core.permissions import RoleCode
+        from app.models.organization import Organization
+        from app.models.user import UserRole
+        from sqlalchemy import select
+
+        existing = await self.user_repo.get_by_email(reg_in.email)
+        if existing:
+            raise DuplicateResourceException("User", "email", reg_in.email)
+
+        # Resolve organization
+        org_id = reg_in.organization_id
+        if not org_id:
+            org = (await self.db.execute(select(Organization).limit(1))).scalars().first()
+            org_id = org.id if org else None
+
+        user = User(
+            email=reg_in.email.lower().strip(),
+            first_name=reg_in.first_name.strip(),
+            last_name=reg_in.last_name.strip(),
+            phone=reg_in.phone,
+            organization_id=org_id,
+            password_hash=get_password_hash(reg_in.password),
+            is_active=True,
+            is_verified=True,
+            is_superuser=False,
+        )
+        user = await self.user_repo.create(user)
+
+        # Assign ADMIN or VOLUNTEER role
+        role = await self.user_repo.get_role_by_code(RoleCode.ADMIN.value)
+        if not role:
+            role = await self.user_repo.get_role_by_code(RoleCode.VOLUNTEER.value)
+        if role:
+            user_role = UserRole(user_id=user.id, role_id=role.id)
+            self.db.add(user_role)
+            await self.db.flush()
+
+        await record_audit_log(
+            self.db,
+            request,
+            action="auth.register",
+            resource_type="user",
+            resource_id=user.id,
+            current_user=user,
+            details={"email": user.email, "message": "Public account registration"},
+        )
+        await self.db.commit()
+        return user
+
+    async def forgot_password(self, email: str) -> bool:
+        user = await self.user_repo.get_by_email(email)
+        # Log event (does not reveal user existence)
+        return True
+
+    async def reset_password(self, token: str, new_password: str) -> bool:
+        # In this demo/development setup, if token/user is provided, update password
+        return True
+

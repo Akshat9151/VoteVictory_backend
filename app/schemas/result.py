@@ -50,3 +50,7 @@ class ResultPublishRequest(BaseModel):
 
 
 ResultCertificationRequest = ResultPublishRequest
+
+
+class ResultTallyRequest(BaseModel):
+    election_id: str

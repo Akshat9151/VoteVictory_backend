@@ -6,7 +6,7 @@ from app.core.dependencies import require_permissions
 from app.core.permissions import PermissionCode
 from app.models.user import User
 from app.schemas.common import APIResponse
-from app.schemas.result import ElectionResultSummaryResponse, ResultPublishRequest
+from app.schemas.result import ElectionResultSummaryResponse, ResultPublishRequest, ResultTallyRequest
 from app.services.result_service import ResultService
 
 router = APIRouter(prefix="/results", tags=["Result Management"])
@@ -24,7 +24,7 @@ async def get_election_results(
 
 
 @router.post("/election/{election_id}/tally", response_model=APIResponse[ElectionResultSummaryResponse])
-async def tally_election_results(
+async def tally_election_results_by_param(
     request: Request,
     election_id: str,
     current_user: User = Depends(require_permissions(PermissionCode.RESULT_COUNT.value)),
@@ -32,6 +32,22 @@ async def tally_election_results(
 ):
     service = ResultService(db)
     results = await service.tally_results(request, election_id, current_user)
+    return APIResponse(
+        success=True,
+        message="Election ballots tallied and summarized.",
+        data=results
+    )
+
+
+@router.post("/tally", response_model=APIResponse[ElectionResultSummaryResponse])
+async def tally_election_results_by_body(
+    request: Request,
+    tally_in: ResultTallyRequest,
+    current_user: User = Depends(require_permissions(PermissionCode.RESULT_COUNT.value)),
+    db: AsyncSession = Depends(get_db)
+):
+    service = ResultService(db)
+    results = await service.tally_results(request, tally_in.election_id, current_user)
     return APIResponse(
         success=True,
         message="Election ballots tallied and summarized.",

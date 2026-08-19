@@ -33,9 +33,12 @@ async def record_audit_log(
     # Determine actor information
     act_id = actor_id or (current_user.id if current_user else None)
     act_email = actor_name or (current_user.email if current_user else "system")
-    act_role = actor_role or (getattr(current_user, "role", None) if current_user else None)
-    if not act_role and current_user and hasattr(current_user, "roles") and current_user.roles:
-        act_role = current_user.roles[0].role.code if hasattr(current_user.roles[0], "role") else None
+    act_role = actor_role or getattr(current_user, "role", None)
+    if not act_role and current_user and "roles" in current_user.__dict__:
+        roles = current_user.__dict__["roles"]
+        if roles and len(roles) > 0:
+            r = getattr(roles[0], "role", None)
+            act_role = getattr(r, "code", None) if r else None
 
     org_id = organization_id or (current_user.organization_id if current_user else "default_org")
 

@@ -18,28 +18,41 @@ class ExpenseService:
         self.db = db
         self.repo = ExpenseRepository(db)
 
-    async def get_expenses(self, organization_id: str) -> List[ExpenseResponse]:
+    def _to_response(self, e: Expense) -> ExpenseResponse:
+        date_val = e.date or datetime.now().strftime("%d %b %Y")
+        created_val = e.created_at.isoformat() if hasattr(e, "created_at") and e.created_at else date_val
+        receipt = getattr(e, "receiptUrl", None) or getattr(e, "receipt_url", None)
+        note_val = e.note or ""
+        return ExpenseResponse(
+            id=e.id,
+            organization_id=e.organization_id,
+            election_id=getattr(e, "election_id", None) or e.organization_id,
+            title=getattr(e, "title", None) or note_val[:50] or e.category,
+            category=e.category,
+            amount=e.amount,
+            date=date_val,
+            expense_date=date_val,
+            note=note_val,
+            notes=note_val,
+            mode=e.mode or "UPI / Online",
+            user=e.user or "Admin",
+            vendor_name=getattr(e, "vendor_name", None),
+            receiptUrl=receipt,
+            receipt_url=receipt,
+            created_at=created_val,
+            updated_at=created_val,
+        )
+
+    async def get_expenses(self, organization_id: Optional[str] = None) -> List[ExpenseResponse]:
         expenses = await self.repo.list_all(organization_id=organization_id)
-        return [
-            ExpenseResponse(
-                id=e.id,
-                category=e.category,
-                amount=e.amount,
-                date=e.date,
-                note=e.note,
-                mode=e.mode,
-                user=e.user,
-                receiptUrl=e.receiptUrl
-            )
-            for e in expenses
-        ]
+        return [self._to_response(e) for e in expenses]
 
     async def add_expense(
         self,
         data: ExpenseCreate,
         organization_id: str,
         user: Optional[User] = None,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> ExpenseResponse:
         if data.amount <= 0:
             raise ValidationException("Expense amount must be greater than zero.")
@@ -57,8 +70,10 @@ class ExpenseService:
             )
 
         expense_id = f"exp_{int(time.time() * 1000)}"
-        date_str = data.date or datetime.now().strftime("%d %b %Y")
-        user_name = data.user or (user.name if user else "Campaign User")
+        date_str = data.date or data.expense_date or datetime.now().strftime("%d %b %Y")
+        user_name = data.user or (user.name if user and hasattr(user, "name") and user.name else "Admin")
+        receipt_str = data.receiptUrl or data.receipt_url
+        note_str = data.note or data.notes or data.title or ""
 
         expense = Expense(
             id=expense_id,
@@ -66,10 +81,10 @@ class ExpenseService:
             category=data.category,
             amount=data.amount,
             date=date_str,
-            note=data.note or "",
+            note=note_str,
             mode=data.mode or "UPI / Online",
             user=user_name,
-            receiptUrl=data.receiptUrl
+            receiptUrl=receipt_str,
         )
         await self.repo.create(expense)
 
@@ -80,24 +95,21 @@ class ExpenseService:
             resource_id=expense.id,
             organization_id=organization_id,
             current_user=user,
-            details={"message": f"Added expense ₹{expense.amount:,.2f} for '{expense.category}' (Mode: {expense.mode}). New total: ₹{projected_total:,.2f}", "ip_address": ip_address}
+            details={
+                "message": f"Added expense ₹{expense.amount:,.2f} for '{expense.category}' (Mode: {expense.mode}). New total: ₹{projected_total:,.2f}",
+                "ip_address": ip_address,
+            },
         )
         await self.db.commit()
 
-        return ExpenseResponse(
-            id=expense.id,
-            category=expense.category,
-            amount=expense.amount,
-            date=expense.date,
-            note=expense.note,
-            mode=expense.mode,
-            user=expense.user,
-            receiptUrl=expense.receiptUrl
-        )
+        return self._to_response(expense)
 
-    async def get_budget_summary(self, organization_id: str) -> BudgetSummary:
+    async def get_budget_summary(self, organization_id: Optional[str] = None) -> BudgetSummary:
         budget_limit = settings.STATUTORY_BUDGET_LIMIT
         total_spent = await self.repo.get_total_spent(organization_id=organization_id)
+        expenses = await self.repo.list_all(organization_id=organization_id)
+        expense_count = len(expenses)
+
         remaining = max(0.0, budget_limit - total_spent)
         utilized_percent = round((total_spent / budget_limit) * 100) if budget_limit > 0 else 0
 
@@ -105,5 +117,10 @@ class ExpenseService:
             budgetLimit=budget_limit,
             totalSpent=total_spent,
             remaining=remaining,
-            utilizedPercent=utilized_percent
+            utilizedPercent=utilized_percent,
+            budget_limit=budget_limit,
+            total_spent=total_spent,
+            utilized_percent=float(utilized_percent),
+            expense_count=expense_count,
+            expenseCount=expense_count,
         )

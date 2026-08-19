@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.audit import record_audit_log
-from app.core.exceptions import ResourceNotFoundException
+from app.core.exceptions import PermissionDeniedException, ResourceNotFoundException
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -39,13 +39,13 @@ class CandidateService:
             hindiName=cand_in.hindiName or full_name,
             post=cand_in.post or ("Sarpanch (Gram Panchayat)" if cand_in.postType == "sarpanch" else "Panch (Ward)"),
             postType=cand_in.postType or "sarpanch",
-            constituency_name=cand_in.constituency or "Gram Panchayat Rampur",
+            constituency_name=cand_in.constituency,
             symbol=cand_in.symbol or "🚜",
             symbolName=cand_in.symbolName or "Tractor",
             photo=cand_in.photo or cand_in.photo_url or "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
             slogan=cand_in.slogan or "गांव का समग्र विकास, हर घर विश्वास और खुशहाली!",
-            votersCount=cand_in.votersCount or 3500,
-            volunteersCount=cand_in.volunteersCount or 24,
+            votersCount=cand_in.votersCount or 0,
+            volunteersCount=cand_in.volunteersCount or 0,
             manifesto=cand_in.manifesto or "",
             full_name=full_name.strip(),
             candidate_id_number=cand_in.candidate_id_number,
@@ -109,8 +109,33 @@ class CandidateService:
 
     async def update_candidate(self, request: Request, cand_id: str, cand_in: CandidateUpdate, current_user: User) -> Candidate:
         cand = await self.get_candidate(cand_id)
+        if current_user.organization_id and cand.organization_id != current_user.organization_id:
+            raise PermissionDeniedException(message="Cannot edit a candidate from another organization.")
         prev_state = {"full_name": cand.full_name, "party_name": cand.party_name}
 
+        if cand_in.name is not None:
+            cand.name = cand_in.name.strip()
+            cand.full_name = cand_in.name.strip()
+        if cand_in.hindiName is not None:
+            cand.hindiName = cand_in.hindiName.strip()
+        if cand_in.post is not None:
+            cand.post = cand_in.post.strip()
+        if cand_in.postType is not None:
+            cand.postType = cand_in.postType
+        if cand_in.constituency is not None:
+            cand.constituency_name = cand_in.constituency.strip()
+        if cand_in.symbol is not None:
+            cand.symbol = cand_in.symbol
+        if cand_in.symbolName is not None:
+            cand.symbolName = cand_in.symbolName.strip()
+        if cand_in.photo is not None:
+            cand.photo = cand_in.photo
+        if cand_in.slogan is not None:
+            cand.slogan = cand_in.slogan.strip()
+        if cand_in.votersCount is not None:
+            cand.votersCount = cand_in.votersCount
+        if cand_in.volunteersCount is not None:
+            cand.volunteersCount = cand_in.volunteersCount
         if cand_in.full_name is not None:
             cand.full_name = cand_in.full_name.strip()
         if cand_in.candidate_id_number is not None:
@@ -147,6 +172,22 @@ class CandidateService:
             new_state={"full_name": updated.full_name}
         )
         return updated
+
+    async def delete_candidate(self, request: Request, cand_id: str, current_user: User) -> bool:
+        cand = await self.get_candidate(cand_id)
+        if current_user.organization_id and cand.organization_id != current_user.organization_id:
+            raise PermissionDeniedException(message="Cannot delete a candidate from another organization.")
+        await self.db.delete(cand)
+        await self.db.commit()
+        await record_audit_log(
+            self.db,
+            request,
+            action="candidate.delete",
+            resource_type="candidate",
+            resource_id=cand.id,
+            current_user=current_user,
+        )
+        return True
 
     async def update_candidate_status(
         self,

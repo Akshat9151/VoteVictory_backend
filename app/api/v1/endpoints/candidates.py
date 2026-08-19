@@ -163,6 +163,18 @@ async def update_candidate(
     )
 
 
+@router.delete("/{cand_id}", response_model=APIResponse[bool])
+async def delete_candidate(
+    request: Request,
+    cand_id: str,
+    current_user: User = Depends(require_permissions(PermissionCode.CANDIDATE_UPDATE.value)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = CandidateService(db)
+    await service.delete_candidate(request, cand_id, current_user)
+    return APIResponse(success=True, message="Candidate profile deleted.", data=True)
+
+
 @router.post("/{cand_id}/status", response_model=APIResponse[CandidateResponse])
 async def update_candidate_status(
     request: Request,

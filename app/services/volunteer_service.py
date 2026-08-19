@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from fastapi import Request
 from sqlalchemy import desc, func, select
@@ -517,6 +517,36 @@ class VolunteerService:
                 )
             )
         return responses
+
+    async def update_assignment(
+        self,
+        request: Request,
+        assignment_id: str,
+        update_in: Any,
+        current_user: User,
+    ) -> VolunteerAssignment:
+        assignment = await self.assignment_repo.get_by_id(assignment_id)
+        if not assignment:
+            raise ResourceNotFoundException("VolunteerAssignment", "id", assignment_id)
+
+        if hasattr(update_in, "is_active") and update_in.is_active is not None:
+            assignment.is_active = update_in.is_active
+        elif isinstance(update_in, dict) and "is_active" in update_in:
+            assignment.is_active = update_in["is_active"]
+
+        if hasattr(update_in, "task_role") and update_in.task_role:
+            assignment.task_role = update_in.task_role
+        elif isinstance(update_in, dict) and "task_role" in update_in:
+            assignment.task_role = update_in["task_role"]
+
+        if hasattr(update_in, "notes") and update_in.notes is not None:
+            assignment.notes = update_in.notes
+        elif isinstance(update_in, dict) and "notes" in update_in:
+            assignment.notes = update_in["notes"]
+
+        await self.db.commit()
+        await self.db.refresh(assignment)
+        return assignment
 
     def _to_profile_out(self, p: VolunteerProfile) -> VolunteerProfileOut:
         total = p.total_submissions or 0

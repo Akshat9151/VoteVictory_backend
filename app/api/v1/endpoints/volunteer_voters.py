@@ -52,6 +52,7 @@ async def add_volunteer_voter(
     )
 
 
+@router.put("/{id}/status", response_model=VolunteerVoterResponse, dependencies=[Depends(require_roles(["superadmin", "admin", "volunteer"]))])
 @router.patch("/{id}/status", response_model=VolunteerVoterResponse, dependencies=[Depends(require_roles(["superadmin", "admin", "volunteer"]))])
 async def update_volunteer_voter_status(
     id: str,

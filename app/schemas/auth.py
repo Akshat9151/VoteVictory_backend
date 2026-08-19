@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class LoginRequest(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
-    role: Optional[str] = "admin"
+    role: Optional[str] = None
     password: Optional[str] = None
     mfa_code: Optional[str] = Field(None, description="6-digit TOTP / OTP code if MFA is enabled")
     device_info: Optional[str] = "Web Browser"
@@ -35,6 +35,7 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token: Optional[str] = None
+    email: Optional[str] = None
     token_type: str = "bearer"
     expires_in: Optional[int] = 3600
     user: Optional[AuthUserProfile] = None
@@ -46,6 +47,8 @@ class TokenResponse(BaseModel):
             data["access_token"] = data["token"]
         if "user" in data and isinstance(data["user"], dict):
             data["user"] = AuthUserProfile(**data["user"])
+        if data.get("email") is None and data.get("user") is not None:
+            data["email"] = data["user"].email
         super().__init__(**data)
 
 
@@ -63,11 +66,28 @@ class TokenPayload(BaseModel):
 
 class UserRegisterRequest(BaseModel):
     organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
     email: str
     password: str = Field(..., min_length=6)
     first_name: str
     last_name: str
     phone: Optional[str] = None
+
+
+class SignupOtpRequest(UserRegisterRequest):
+    pass
+
+
+class OtpVerifyRequest(BaseModel):
+    challenge_id: str
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class OtpChallengeResponse(BaseModel):
+    challenge_id: str
+    destination: str
+    expires_in: int
+    dev_code: Optional[str] = None
 
 
 class RefreshTokenRequest(BaseModel):

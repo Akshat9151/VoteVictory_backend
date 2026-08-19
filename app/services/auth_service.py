@@ -34,7 +34,7 @@ from app.models.election import Election, ElectionStatus, ElectionType, Election
 from app.models.organization import Organization, OrganizationStatus
 from app.models.user import User, UserRole, UserSession
 from app.repositories.user_repo import UserRepository
-from app.schemas.auth import LoginRequest, MFASetupResponse, TokenResponse
+from app.schemas.auth import LoginRequest, MFASetupResponse, TokenResponse, UserRegisterRequest
 
 
 class AuthService:

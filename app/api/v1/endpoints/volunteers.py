@@ -20,6 +20,7 @@ from app.schemas.volunteer import (
     VolunteerTargetOut,
     VolunteerTaskCreate,
     VolunteerTaskOut,
+    VolunteerStatusUpdate,
     VolunteerUpdate,
 )
 from app.services.volunteer_service import VolunteerService

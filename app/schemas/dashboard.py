@@ -86,6 +86,7 @@ class ExecutiveOverviewResponse(BaseModel):
 class AdminDashboardResponse(BaseModel):
     total_volunteers: int = 0
     active_volunteers: int = 0
+    total_voters: int = 0
     total_data_collected: int = 0
     today_data_collected: int = 0
     weekly_data_collected: int = 0
@@ -100,10 +101,12 @@ class AdminDashboardResponse(BaseModel):
     total_whatsapp_sent: int = 0
     total_email_sent: int = 0
     total_instagram_sent: int = 0
+    messages_sent_this_week: int = 0
     top_performing_volunteers: List[VolunteerPerformanceSummary] = []
     area_progress: List[AreaCollectionSummary] = []
     booth_progress: List[BoothCollectionSummary] = []
     recent_activities: List[RecentActivityItem] = []
+    ward_coverage: List[Dict[str, Any]] = []
 
 
 class SuperAdminDashboardResponse(BaseModel):
@@ -112,11 +115,14 @@ class SuperAdminDashboardResponse(BaseModel):
     total_users: int = 0
     active_elections: int = 0
     completed_elections: int = 0
+    total_candidates: int = 0
+    total_voters: int = 0
     total_voters_registered: int = 0
     total_votes_processed: int = 0
     total_broadcasts_sent: int = 0
     recent_security_events: List[Dict[str, Any]] = []
     recent_audit_logs: List[Dict[str, Any]] = []
+    recent_activity: List[Dict[str, Any]] = []
 
 
 class VolunteerDashboardResponse(BaseModel):

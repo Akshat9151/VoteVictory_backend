@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    activities,
     alerts,
     analytics,
     audit_logs,
@@ -14,6 +15,7 @@ from app.api.v1.endpoints import (
     constituencies,
     dashboard,
     data_collection,
+    design_templates,
     elections,
     expenses,
     health,
@@ -24,6 +26,8 @@ from app.api.v1.endpoints import (
     positions,
     reports,
     results,
+    subscriptions,
+    tasks,
     team,
     templates,
     users,
@@ -60,6 +64,7 @@ api_router.include_router(voting.router)
 api_router.include_router(results.router)
 api_router.include_router(templates.router)
 api_router.include_router(banners.router)
+api_router.include_router(design_templates.router)
 api_router.include_router(notifications.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(analytics.router)
@@ -67,3 +72,6 @@ api_router.include_router(reports.router)
 api_router.include_router(alerts.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(webhooks.router)
+api_router.include_router(activities.router)
+api_router.include_router(tasks.router)
+api_router.include_router(subscriptions.router)

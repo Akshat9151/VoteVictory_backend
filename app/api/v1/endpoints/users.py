@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -16,13 +16,19 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 
 
 def serialize_user(user: User) -> UserResponse:
-    roles = [ur.role.code for ur in user.roles if ur.role]
-    permissions = set()
-    for ur in user.roles:
-        if ur.role:
-            for rp in ur.role.permissions:
-                if rp.permission:
-                    permissions.add(rp.permission.code)
+    roles = []
+    permissions = []
+    if "roles" in user.__dict__ and user.__dict__["roles"]:
+        for ur in user.__dict__["roles"]:
+            r = getattr(ur, "role", None)
+            if r:
+                roles.append(r.code)
+                perms = getattr(r, "permissions", None)
+                if perms:
+                    for rp in perms:
+                        p = getattr(rp, "permission", None)
+                        if p:
+                            permissions.append(p.code)
 
     return UserResponse(
         id=user.id,
@@ -37,8 +43,8 @@ def serialize_user(user: User) -> UserResponse:
         mfa_enabled=user.mfa_enabled,
         last_login_at=user.last_login_at,
         roles=roles,
-        permissions=list(permissions),
-        created_at=user.created_at
+        permissions=list(set(permissions)),
+        created_at=user.created_at,
     )
 
 
@@ -47,6 +53,7 @@ async def get_my_profile(current_user: User = Depends(get_current_user)):
     return APIResponse(data=serialize_user(current_user))
 
 
+@router.get("", response_model=APIResponse[PaginatedResponse[UserResponse]])
 @router.get("/", response_model=APIResponse[PaginatedResponse[UserResponse]])
 async def list_users(
     page: int = Query(1, ge=1),
@@ -54,7 +61,7 @@ async def list_users(
     search: Optional[str] = None,
     org_id: Optional[str] = None,
     current_user: User = Depends(require_permissions(PermissionCode.USER_VIEW.value)),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     users, pagination = await service.list_users(
@@ -62,32 +69,33 @@ async def list_users(
         org_id=org_id,
         page=page,
         page_size=page_size,
-        search=search
+        search=search,
     )
     items = [serialize_user(u) for u in users]
     return APIResponse(data=PaginatedResponse(items=items, pagination=pagination))
 
 
-@router.post("/", response_model=APIResponse[UserResponse])
+@router.post("", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
 async def create_user(
     request: Request,
     user_in: UserCreate,
     current_user: User = Depends(require_permissions(PermissionCode.USER_CREATE.value)),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     user = await service.create_user(request, user_in, current_user)
     return APIResponse(
         success=True,
         message="User successfully created.",
-        data=serialize_user(user)
+        data=serialize_user(user),
     )
 
 
 @router.get("/roles/all", response_model=APIResponse[List[RoleResponse]])
 async def list_roles(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     roles = await service.get_roles()
@@ -100,7 +108,7 @@ async def list_roles(
             is_system=r.is_system,
             description=r.description,
             permissions=[rp.permission.code for rp in r.permissions if rp.permission],
-            created_at=r.created_at
+            created_at=r.created_at,
         )
         for r in roles
     ]
@@ -110,7 +118,7 @@ async def list_roles(
 @router.get("/permissions/all", response_model=APIResponse[List[PermissionResponse]])
 async def list_permissions(
     current_user: User = Depends(require_permissions(PermissionCode.PERMISSION_MANAGE.value)),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     perms = await service.get_permissions()
@@ -122,7 +130,7 @@ async def list_permissions(
 async def get_user_by_id(
     user_id: str,
     current_user: User = Depends(require_permissions(PermissionCode.USER_VIEW.value)),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     user = await service.get_user(user_id, current_user)
@@ -135,12 +143,25 @@ async def update_user(
     user_id: str,
     user_in: UserUpdate,
     current_user: User = Depends(require_permissions(PermissionCode.USER_UPDATE.value)),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
     user = await service.update_user(request, user_id, user_in, current_user)
     return APIResponse(
         success=True,
         message="User profile updated.",
-        data=serialize_user(user)
+        data=serialize_user(user),
     )
+
+
+@router.delete("/{user_id}", response_model=APIResponse[bool])
+async def delete_user(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(require_permissions(PermissionCode.USER_DELETE.value)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate and remove team member access."""
+    service = UserService(db)
+    await service.delete_user(request, user_id, current_user)
+    return APIResponse(success=True, message="User account successfully deactivated.", data=True)

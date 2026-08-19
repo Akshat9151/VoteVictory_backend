@@ -16,6 +16,7 @@ from app.schemas.volunteer import (
     VolunteerLeaderboardEntry,
     VolunteerPerformanceOut,
     VolunteerProfileOut,
+    VolunteerStatusUpdate,
     VolunteerTargetCreate,
     VolunteerTargetOut,
     VolunteerTaskCreate,
@@ -210,3 +211,23 @@ async def assign_volunteer(
         message="Volunteer assigned to polling station.",
         data=VolunteerAssignmentResponse.model_validate(assignment),
     )
+
+
+@router.put("/assignments/{assignment_id}", response_model=APIResponse[VolunteerAssignmentResponse])
+@router.patch("/assignments/{assignment_id}", response_model=APIResponse[VolunteerAssignmentResponse])
+async def update_assignment(
+    request: Request,
+    assignment_id: str,
+    update_in: VolunteerStatusUpdate,
+    current_user: User = Depends(require_permissions(PermissionCode.VOLUNTEER_ASSIGN.value)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update volunteer polling station assignment status or details."""
+    service = VolunteerService(db)
+    assignment = await service.update_assignment(request, assignment_id, update_in, current_user)
+    return APIResponse(
+        success=True,
+        message="Volunteer assignment updated.",
+        data=VolunteerAssignmentResponse.model_validate(assignment),
+    )
+

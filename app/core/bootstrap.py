@@ -10,6 +10,7 @@ from app.models.area import Booth
 from app.models.broadcast import DeliveryLog
 from app.models.candidate import Candidate
 from app.models.complaint import Complaint
+from app.models.design_template import DesignTemplate
 from app.models.expense import Expense
 from app.models.organization import Organization, OrganizationStatus
 from app.models.team import TeamMember, Volunteer
@@ -258,6 +259,112 @@ async def seed_system_data(db: AsyncSession) -> None:
             Booth(organization_id=org.id, booth_number="Booth 06", boothNo="Booth 06", location="Cooperative Society Hall, Ward 06", incharge="Dinesh Yadav (+91 98288 33110)", voters=460, slips=390, coverage="84%")
         ]
         db.add_all(booths)
+
+    # 13. Seed Design Studio Templates
+    tmpl_stmt = select(DesignTemplate).limit(1)
+    if not (await db.execute(tmpl_stmt)).scalars().first():
+        templates = [
+            DesignTemplate(
+                id="template-poster-tricolor",
+                organization_id=org.id,
+                name="Tricolor Poster – Portrait",
+                election_type="panchayat",
+                category="poster",
+                format_name="A4 Poster",
+                format_dims="210 × 297 mm",
+                thumbnail_url="https://images.unsplash.com/photo-1589939705066-5ec8b3b47f1d?w=200&h=280&crop=faces&fit=crop",
+                is_active=True,
+                display_order=1,
+                layout_json={
+                    "bg_color": "#ffffff",
+                    "width": 600,
+                    "height": 848,
+                    "elements": [
+                        {"type": "shape", "x": 0, "y": 0, "width": 600, "height": 130, "color": "#ff9933", "value": "tricolor-top", "z_index": 1},
+                        {"type": "shape", "x": 0, "y": 130, "width": 600, "height": 130, "color": "#ffffff", "value": "tricolor-mid", "z_index": 1},
+                        {"type": "shape", "x": 0, "y": 260, "width": 600, "height": 130, "color": "#138808", "value": "tricolor-bot", "z_index": 1},
+                        {"type": "text", "x": 10, "y": 350, "width": 580, "height": 80, "placeholder": "{{candidate_name}}", "font_size": 48, "font_weight": "bold", "color": "#000000", "z_index": 3},
+                        {"type": "text", "x": 10, "y": 430, "width": 580, "height": 60, "placeholder": "{{position}}", "font_size": 32, "color": "#333333", "z_index": 3},
+                        {"type": "symbol", "x": 450, "y": 320, "width": 120, "height": 120, "placeholder": "{{symbol}}", "z_index": 4},
+                        {"type": "text", "x": 10, "y": 500, "width": 580, "height": 100, "placeholder": "{{slogan}}", "font_size": 24, "font_weight": "bold", "color": "#ff6b00", "text_align": "center", "z_index": 3},
+                        {"type": "text", "x": 10, "y": 620, "width": 580, "height": 50, "value": "Campaign 2026", "font_size": 16, "color": "#666666", "text_align": "center", "z_index": 3}
+                    ]
+                }
+            ),
+            DesignTemplate(
+                id="template-banner-landscape",
+                organization_id=org.id,
+                name="Campaign Banner – Landscape",
+                election_type="panchayat",
+                category="banner",
+                format_name="Hoarding Banner",
+                format_dims="1200 × 600 px",
+                thumbnail_url="https://images.unsplash.com/photo-1585647347384-2593bc35786b?w=300&h=150&crop=faces&fit=crop",
+                is_active=True,
+                display_order=2,
+                layout_json={
+                    "bg_color": "#0f172a",
+                    "width": 1200,
+                    "height": 600,
+                    "elements": [
+                        {"type": "text", "x": 20, "y": 50, "width": 550, "height": 150, "placeholder": "{{candidate_name}}", "font_size": 64, "font_weight": "bold", "color": "#ffffff", "z_index": 2},
+                        {"type": "photo", "x": 50, "y": 150, "width": 400, "height": 400, "placeholder": "candidate_photo", "z_index": 1},
+                        {"type": "symbol", "x": 600, "y": 150, "width": 200, "height": 200, "placeholder": "{{symbol}}", "z_index": 3},
+                        {"type": "text", "x": 600, "y": 380, "width": 550, "height": 150, "placeholder": "{{slogan}}", "font_size": 40, "font_weight": "bold", "color": "#fbbf24", "text_align": "center", "z_index": 2}
+                    ]
+                }
+            ),
+            DesignTemplate(
+                id="template-idcard-small",
+                organization_id=org.id,
+                name="ID Card – Vertical",
+                election_type="panchayat",
+                category="id_card",
+                format_name="ID Card",
+                format_dims="90 × 150 mm",
+                thumbnail_url="https://images.unsplash.com/photo-1549887534-f3d6f6a8f5a0?w=90&h=150&crop=faces&fit=crop",
+                is_active=True,
+                display_order=3,
+                layout_json={
+                    "bg_color": "#1e293b",
+                    "width": 350,
+                    "height": 560,
+                    "elements": [
+                        {"type": "photo", "x": 20, "y": 20, "width": 310, "height": 200, "placeholder": "candidate_photo", "z_index": 1},
+                        {"type": "text", "x": 10, "y": 240, "width": 330, "height": 60, "placeholder": "{{candidate_name}}", "font_size": 28, "font_weight": "bold", "color": "#ffffff", "text_align": "center", "z_index": 2},
+                        {"type": "text", "x": 10, "y": 300, "width": 330, "height": 40, "placeholder": "{{position}}", "font_size": 18, "color": "#94a3b8", "text_align": "center", "z_index": 2},
+                        {"type": "symbol", "x": 125, "y": 360, "width": 100, "height": 100, "placeholder": "{{symbol}}", "z_index": 3},
+                        {"type": "text", "x": 10, "y": 480, "width": 330, "height": 40, "placeholder": "{{contact}}", "font_size": 14, "color": "#cbd5e1", "text_align": "center", "z_index": 2}
+                    ]
+                }
+            ),
+            DesignTemplate(
+                id="template-social-square",
+                organization_id=org.id,
+                name="Social Card – Square (Instagram/WhatsApp)",
+                election_type="panchayat",
+                category="social",
+                format_name="Square Post",
+                format_dims="1080 × 1080 px",
+                thumbnail_url="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&h=200&crop=faces&fit=crop",
+                is_active=True,
+                display_order=4,
+                layout_json={
+                    "bg_color": "#064e3b",
+                    "width": 600,
+                    "height": 600,
+                    "elements": [
+                        {"type": "shape", "x": 20, "y": 20, "width": 560, "height": 560, "border_color": "#10b981", "border_width": 2, "border_radius": 16, "z_index": 1},
+                        {"type": "text", "x": 30, "y": 60, "width": 540, "height": 70, "placeholder": "{{candidate_name}}", "font_size": 42, "font_weight": "bold", "color": "#ffffff", "text_align": "center", "z_index": 2},
+                        {"type": "text", "x": 30, "y": 140, "width": 540, "height": 50, "placeholder": "{{position}}", "font_size": 24, "color": "#6ee7b7", "text_align": "center", "z_index": 2},
+                        {"type": "symbol", "x": 230, "y": 220, "width": 140, "height": 140, "placeholder": "{{symbol}}", "z_index": 3},
+                        {"type": "text", "x": 30, "y": 400, "width": 540, "height": 80, "placeholder": "{{slogan}}", "font_size": 22, "font_weight": "bold", "color": "#fef08a", "text_align": "center", "z_index": 2},
+                        {"type": "text", "x": 30, "y": 500, "width": 540, "height": 40, "placeholder": "{{contact}}", "font_size": 16, "color": "#a7f3d0", "text_align": "center", "z_index": 2}
+                    ]
+                }
+            )
+        ]
+        db.add_all(templates)
 
     await db.commit()
     logger.info("System bootstrap completed successfully.")

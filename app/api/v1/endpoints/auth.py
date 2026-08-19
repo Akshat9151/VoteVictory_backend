@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -8,13 +8,50 @@ from app.schemas.auth import (
     LoginRequest,
     MFASetupResponse,
     MFAVerifyRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshTokenRequest,
     TokenResponse,
+    UserRegisterRequest,
 )
 from app.schemas.common import APIResponse
+from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def serialize_user(user: User) -> UserResponse:
+    roles = []
+    permissions = []
+    if "roles" in user.__dict__ and user.__dict__["roles"]:
+        for ur in user.__dict__["roles"]:
+            r = getattr(ur, "role", None)
+            if r:
+                roles.append(r.code)
+                perms = getattr(r, "permissions", None)
+                if perms:
+                    for rp in perms:
+                        p = getattr(rp, "permission", None)
+                        if p:
+                            permissions.append(p.code)
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        organization_id=user.organization_id,
+        is_active=user.is_active,
+        is_verified=user.is_verified,
+        is_superuser=user.is_superuser,
+        mfa_enabled=user.mfa_enabled,
+        last_login_at=user.last_login_at,
+        roles=roles,
+        permissions=list(set(permissions)),
+        created_at=user.created_at,
+    )
 
 
 @router.post("/login", response_model=APIResponse[TokenResponse])
@@ -29,6 +66,53 @@ async def login(
         success=True,
         message="Authentication successful.",
         data=token_response
+    )
+
+
+@router.post("/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+async def register(
+    request: Request,
+    reg_data: UserRegisterRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Public user onboarding and campaign account registration."""
+    service = AuthService(db)
+    user = await service.register_user(request, reg_data)
+    return APIResponse(
+        success=True,
+        message="User account successfully created.",
+        data=serialize_user(user)
+    )
+
+
+@router.post("/forgot-password", response_model=APIResponse[bool])
+async def forgot_password(
+    data: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Initiate password recovery flow."""
+    service = AuthService(db)
+    await service.forgot_password(data.email)
+    return APIResponse(
+        success=True,
+        message="If this email is registered, a password reset link has been dispatched.",
+        data=True
+    )
+
+
+@router.post("/reset-password", response_model=APIResponse[bool])
+async def reset_password(
+    data: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    """Confirm password reset with token."""
+    service = AuthService(db)
+    await service.reset_password(data.token, data.new_password)
+    return APIResponse(
+        success=True,
+        message="Password updated successfully.",
+        data=True
     )
 
 

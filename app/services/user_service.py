@@ -134,8 +134,24 @@ class UserService:
         )
         return updated
 
+    async def delete_user(self, request: Optional[Request], user_id: str, current_user: User) -> bool:
+        user = await self.get_user(user_id, current_user)
+        user.is_active = False
+        await self.user_repo.update(user)
+        await record_audit_log(
+            self.db,
+            request,
+            action="user.deactivate",
+            resource_type="user",
+            resource_id=user.id,
+            current_user=current_user,
+            details={"message": f"Deactivated user {user.email}"},
+        )
+        return True
+
     async def get_roles(self) -> List[Role]:
         return await self.user_repo.get_all_roles()
 
     async def get_permissions(self) -> List[Permission]:
         return await self.user_repo.get_all_permissions()
+

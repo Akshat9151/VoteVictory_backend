@@ -1,3 +1,4 @@
+from app.models.activity import ActivityStatus, AttendanceStatus, FieldActivityLog, VolunteerAttendanceRecord
 from app.models.alert import AlertSeverity, OperationalAlert, OperationalAlertType
 from app.models.area import Area, Booth, BoothStatus, MapStatus, Ward
 from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
@@ -16,6 +17,7 @@ from app.models.data_collection import (
     ReviewAction,
     SubmissionStatus,
 )
+from app.models.design_template import DesignTemplate
 from app.models.election import (
     Constituency,
     Election,
@@ -39,6 +41,15 @@ from app.models.notification import (
 from app.models.organization import Organization, OrganizationStatus
 from app.models.polling_station import PollingStation, PollingStationStatus, VolunteerAssignment
 from app.models.result import Result, ResultStatus, ResultSummary
+from app.models.subscription import (
+    CampaignSubscription,
+    InvoiceStatus,
+    PaymentGateway,
+    PlanTier,
+    SubscriptionInvoice,
+    SubscriptionStatus,
+)
+from app.models.task import CampaignTask
 from app.models.team import TeamMember, Volunteer
 from app.models.user import Permission, Role, RoleCode, RolePermission, User, UserRole, UserSession
 from app.models.volunteer import (
@@ -140,4 +151,5 @@ __all__ = [
     "WebhookEvent",
     "SystemSetting",
     "FileAsset",
+    "DesignTemplate",
 ]

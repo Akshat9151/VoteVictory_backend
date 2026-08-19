@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -25,8 +24,8 @@ class AttendanceStatus(str, enum.Enum):
 class FieldActivityLog(Base):
     __tablename__ = "field_activity_logs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    volunteer_id = Column(UUID(as_uuid=True), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    volunteer_id = Column(String(64), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
     volunteer_name = Column(String(150), nullable=False)
     ward = Column(String(100), nullable=True)
     booth_no = Column(String(50), nullable=True)
@@ -48,8 +47,8 @@ class FieldActivityLog(Base):
 class VolunteerAttendanceRecord(Base):
     __tablename__ = "volunteer_attendance_records"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    volunteer_id = Column(UUID(as_uuid=True), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    volunteer_id = Column(String(64), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
     volunteer_name = Column(String(150), nullable=False)
     ward = Column(String(100), nullable=True)
     date = Column(String(50), nullable=False)

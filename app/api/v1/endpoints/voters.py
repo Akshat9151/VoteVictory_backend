@@ -28,6 +28,8 @@ async def get_default_org_id(db: AsyncSession) -> str:
     return org.id if org else "default_org"
 
 
+from app.schemas.common import APIResponse, PaginatedResponse, PaginationMeta
+
 @router.get("", response_model=List[VoterResponse])
 @router.get("/", response_model=List[VoterResponse])
 async def get_voters(
@@ -41,6 +43,51 @@ async def get_voters(
     if not voters:
         voters = await service.list_org_voters(organization_id=None)
     return [VoterResponse.model_validate(v) for v in voters]
+
+
+@router.get("/election/{election_id}", response_model=APIResponse[PaginatedResponse[VoterResponse]])
+async def list_election_voters(
+    election_id: str,
+    page: int = 1,
+    page_size: int = 50,
+    search: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve voters for a specific election roll."""
+    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    service = VoterService(db)
+    voters = await service.list_org_voters(organization_id=org_id)
+    if not voters:
+        voters = await service.list_org_voters(organization_id=None)
+
+    if search:
+        s = search.lower()
+        voters = [
+            v for v in voters
+            if s in (v.first_name or "").lower()
+            or s in (v.last_name or "").lower()
+            or s in (v.name or "").lower()
+            or s in (v.voter_id_number or "").lower()
+            or s in (v.phone_number or "").lower()
+            or s in (v.mobile or "").lower()
+        ]
+
+    items = [VoterResponse.model_validate(v) for v in voters]
+    total_items = len(items)
+    pagination = PaginationMeta(
+        page=page,
+        page_size=page_size,
+        total_items=total_items,
+        total_pages=max(1, (total_items + page_size - 1) // page_size),
+        has_next=False,
+        has_prev=False
+    )
+    return APIResponse(
+        success=True,
+        message="Voters retrieved successfully.",
+        data=PaginatedResponse(items=items, pagination=pagination, total=total_items)
+    )
 
 
 @router.get("/audience-split", response_model=AudienceSplit)

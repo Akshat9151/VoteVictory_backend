@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, select
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.activity import ActivityStatus, AttendanceStatus, FieldActivityLog, VolunteerAttendanceRecord
 from app.schemas.activity import (
+    ActivityStatusUpdate,
     AttendanceCheckInRequest,
     AttendanceResponse,
     FieldActivityCreate,
@@ -23,6 +23,7 @@ router = APIRouter(tags=["Field Activities & Attendance"])
 async def list_field_activities(
     ward: Optional[str] = Query(None),
     activity_type: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
     db: AsyncSession = Depends(get_db),
 ):
     """List real-time ground field activities with photo evidence."""
@@ -31,13 +32,16 @@ async def list_field_activities(
         stmt = stmt.where(FieldActivityLog.ward == ward)
     if activity_type:
         stmt = stmt.where(FieldActivityLog.activity_type == activity_type)
+    if status_filter and status_filter != "all":
+        stmt = stmt.where(FieldActivityLog.status == status_filter)
     stmt = stmt.order_by(desc(FieldActivityLog.created_at))
-    
+
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
 @router.post("/field-activities", response_model=FieldActivityResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/field-activities/submit", response_model=FieldActivityResponse, status_code=status.HTTP_201_CREATED)
 async def submit_field_activity(
     activity_in: FieldActivityCreate,
     db: AsyncSession = Depends(get_db),
@@ -45,7 +49,7 @@ async def submit_field_activity(
     """Submit ground field activity report with photos, reach count and location."""
     activity = FieldActivityLog(
         volunteer_id=activity_in.volunteer_id,
-        volunteer_name=activity_in.volunteer_name,
+        volunteer_name=activity_in.volunteer_name or "Field Volunteer",
         ward=activity_in.ward,
         booth_no=activity_in.booth_no,
         activity_type=activity_in.activity_type,
@@ -63,6 +67,29 @@ async def submit_field_activity(
     return activity
 
 
+@router.put("/field-activities/{id}/status", response_model=FieldActivityResponse)
+@router.patch("/field-activities/{id}/status", response_model=FieldActivityResponse)
+async def update_field_activity_status(
+    id: str,
+    status_in: ActivityStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update field activity verification status (Approved, Rejected, Verified, Flagged)."""
+    stmt = select(FieldActivityLog).where(FieldActivityLog.id == id)
+    result = await db.execute(stmt)
+    activity = result.scalars().first()
+    if not activity:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Field activity '{id}' not found",
+        )
+
+    activity.status = status_in.status
+    await db.commit()
+    await db.refresh(activity)
+    return activity
+
+
 # Volunteer Attendance (Section 7.7)
 @router.get("/attendance", response_model=List[AttendanceResponse])
 async def list_attendance(
@@ -74,7 +101,7 @@ async def list_attendance(
     if date_filter:
         stmt = stmt.where(VolunteerAttendanceRecord.date == date_filter)
     stmt = stmt.order_by(desc(VolunteerAttendanceRecord.created_at))
-    
+
     result = await db.execute(stmt)
     return result.scalars().all()
 

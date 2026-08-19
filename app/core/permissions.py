@@ -24,6 +24,7 @@ class PermissionCode(str, enum.Enum):
     USER_CREATE = "user.create"
     USER_VIEW = "user.view"
     USER_UPDATE = "user.update"
+    USER_DELETE = "user.delete"
     USER_SUSPEND = "user.suspend"
     ROLE_MANAGE = "role.manage"
     PERMISSION_MANAGE = "permission.manage"

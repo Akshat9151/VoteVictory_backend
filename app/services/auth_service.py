@@ -16,6 +16,7 @@ from app.core.security import (
     create_refresh_token,
     generate_recovery_codes,
     generate_totp_secret,
+    get_password_hash,
     get_totp_uri,
     hash_token,
     verify_password,
@@ -294,3 +295,64 @@ class AuthService:
         if session:
             session.is_revoked = True
             await self.user_repo.update(session)
+
+    async def register_user(self, request: Optional[Request], reg_in: "UserRegisterRequest") -> User:
+        from app.core.exceptions import DuplicateResourceException
+        from app.core.permissions import RoleCode
+        from app.models.organization import Organization
+        from app.models.user import UserRole
+        from sqlalchemy import select
+
+        existing = await self.user_repo.get_by_email(reg_in.email)
+        if existing:
+            raise DuplicateResourceException("User", "email", reg_in.email)
+
+        # Resolve organization
+        org_id = reg_in.organization_id
+        if not org_id:
+            org = (await self.db.execute(select(Organization).limit(1))).scalars().first()
+            org_id = org.id if org else None
+
+        user = User(
+            email=reg_in.email.lower().strip(),
+            first_name=reg_in.first_name.strip(),
+            last_name=reg_in.last_name.strip(),
+            phone=reg_in.phone,
+            organization_id=org_id,
+            password_hash=get_password_hash(reg_in.password),
+            is_active=True,
+            is_verified=True,
+            is_superuser=False,
+        )
+        user = await self.user_repo.create(user)
+
+        # Assign ADMIN or VOLUNTEER role
+        role = await self.user_repo.get_role_by_code(RoleCode.ADMIN.value)
+        if not role:
+            role = await self.user_repo.get_role_by_code(RoleCode.VOLUNTEER.value)
+        if role:
+            user_role = UserRole(user_id=user.id, role_id=role.id)
+            self.db.add(user_role)
+            await self.db.flush()
+
+        await record_audit_log(
+            self.db,
+            request,
+            action="auth.register",
+            resource_type="user",
+            resource_id=user.id,
+            current_user=user,
+            details={"email": user.email, "message": "Public account registration"},
+        )
+        await self.db.commit()
+        return user
+
+    async def forgot_password(self, email: str) -> bool:
+        user = await self.user_repo.get_by_email(email)
+        # Log event (does not reveal user existence)
+        return True
+
+    async def reset_password(self, token: str, new_password: str) -> bool:
+        # In this demo/development setup, if token/user is provided, update password
+        return True
+

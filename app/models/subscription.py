@@ -2,8 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -37,9 +36,9 @@ class InvoiceStatus(str, enum.Enum):
 class CampaignSubscription(Base):
     __tablename__ = "campaign_subscriptions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     plan_id = Column(Enum(PlanTier), default=PlanTier.PROFESSIONAL, nullable=False)
     plan_name = Column(String(100), default="Professional Plan", nullable=False)
     status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE, nullable=False)
@@ -62,7 +61,7 @@ class SubscriptionInvoice(Base):
     __tablename__ = "subscription_invoices"
 
     id = Column(String(100), primary_key=True)
-    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
+    organization_id = Column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
     date = Column(String(50), nullable=False)
     plan_name = Column(String(150), nullable=False)
     amount = Column(Integer, nullable=False)

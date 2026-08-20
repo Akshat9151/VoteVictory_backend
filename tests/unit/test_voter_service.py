@@ -41,7 +41,10 @@ async def test_batch_voter_import_success(db_session, test_org):
 @pytest.mark.asyncio
 async def test_batch_voter_import_duplicate_id_rejected(db_session, test_org):
     service = VoterService(db_session)
-    # V-04-101 is already seeded
+    await service.add_voter(
+        VoterCreate(id="V-04-101", name="Existing Voter", age=40, gender="Male", ward="Ward 04"),
+        organization_id=test_org.id,
+    )
     batch = [
         {"id": "V-04-101", "name": "Duplicate Voter", "age": 40, "gender": "Male", "ward": "Ward 04"}
     ]
@@ -52,6 +55,19 @@ async def test_batch_voter_import_duplicate_id_rejected(db_session, test_org):
 @pytest.mark.asyncio
 async def test_audience_split_calculation(db_session, test_org):
     service = VoterService(db_session)
+    for index in range(10):
+        await service.add_voter(
+            VoterCreate(
+                id=f"V-02-{index:03d}",
+                name=f"Audience Voter {index}",
+                age=30,
+                gender="Male",
+                ward="Ward 02",
+                mobile=f"+91 90000 000{index}",
+                channel="WhatsApp" if index < 6 else "SMS Only",
+            ),
+            organization_id=test_org.id,
+        )
     split = await service.get_audience_split(test_org.id)
     assert split.total >= 10
     assert split.whatsapp + split.sms == split.total

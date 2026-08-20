@@ -1,5 +1,6 @@
 import pytest
 
+from app.core.config import settings
 from app.core.exceptions import AuthenticationException
 from app.schemas.auth import LoginRequest
 from app.services.auth_service import AuthService
@@ -18,8 +19,8 @@ async def test_auth_login_success(db_session, test_org):
     assert res.token is not None
     assert res.access_token is not None
     assert res.refresh_token is not None
-    assert res.user.role == "superadmin"
-    assert res.user.name == "Rameshwar Patel (Owner)"
+    assert res.user.role == "super_admin"
+    assert res.user.name == f"{settings.FIRST_SUPER_ADMIN_FIRST_NAME} {settings.FIRST_SUPER_ADMIN_LAST_NAME}"
 
 
 @pytest.mark.asyncio
@@ -53,13 +54,12 @@ async def test_auth_token_refresh(db_session):
 
 
 @pytest.mark.asyncio
-async def test_auth_demo_fast_login(db_session):
+async def test_auth_unknown_user_without_password_rejected(db_session):
     service = AuthService(db_session)
-    # Fast login without password creates/fetches role profile
+    # Passwordless login for an unknown phone must not create an account.
     req = LoginRequest(
         phone="+91 99999 88888",
         role="volunteer"
     )
-    res = await service.login(req)
-    assert res.user.role == "volunteer"
-    assert res.token is not None
+    with pytest.raises(AuthenticationException):
+        await service.login(req)

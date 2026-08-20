@@ -282,7 +282,9 @@ class AuthService:
         assigned_roles = {role.upper() for role in user_role_names}
         if user.is_superuser:
             assigned_roles.add(RoleCode.SUPER_ADMIN.value)
-        requested_role = login_data.role.upper().replace("-", "_") if login_data.role else None
+        requested_role = login_data.role.upper().replace("-", "_").replace(" ", "_") if login_data.role else None
+        if requested_role == "SUPERADMIN":
+            requested_role = RoleCode.SUPER_ADMIN.value
         if requested_role and requested_role not in assigned_roles:
             raise AuthenticationException("This account is not assigned to the requested role.")
         primary_role = requested_role or next(iter(assigned_roles), RoleCode.VOLUNTEER.value)

@@ -88,3 +88,25 @@ class UserRepository(BaseRepository[User]):
         stmt = select(UserSession).where(UserSession.refresh_token_hash == token_hash)
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+    async def check_user_has_votes(self, user_id: str) -> bool:
+        """Check if user has any voting-related records that would prevent deletion."""
+        from sqlalchemy import select
+        from app.models.voter import VoterCheckin
+        
+        # Check for voter checkins performed by this user (indicates involvement in voting process)
+        stmt = select(VoterCheckin).where(VoterCheckin.checked_in_by == user_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first() is not None
+
+    async def hard_delete(self, user_id: str) -> bool:
+        """Permanently delete user from database (hard delete)."""
+        user = await self.get_with_roles(user_id)
+        if not user:
+            return False
+        
+        # SQLAlchemy cascade will handle related records with ondelete="CASCADE"
+        # User roles, sessions, volunteer assignments will be auto-deleted
+        await self.db.delete(user)
+        await self.db.commit()
+        return True

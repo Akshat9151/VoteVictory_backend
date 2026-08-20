@@ -60,6 +60,7 @@ async def list_users(
     page_size: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
     org_id: Optional[str] = None,
+    include_inactive: bool = Query(False, description="Include deactivated users in results"),
     current_user: User = Depends(require_permissions(PermissionCode.USER_VIEW.value)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -70,6 +71,7 @@ async def list_users(
         page=page,
         page_size=page_size,
         search=search,
+        include_inactive=include_inactive,
     )
     items = [serialize_user(u) for u in users]
     return APIResponse(data=PaginatedResponse(items=items, pagination=pagination))
@@ -161,7 +163,25 @@ async def delete_user(
     current_user: User = Depends(require_permissions(PermissionCode.USER_DELETE.value)),
     db: AsyncSession = Depends(get_db),
 ):
-    """Deactivate and remove team member access."""
+    """Deactivate and remove team member access (soft delete)."""
     service = UserService(db)
     await service.delete_user(request, user_id, current_user)
     return APIResponse(success=True, message="User account successfully deactivated.", data=True)
+
+
+@router.delete("/{user_id}/purge", response_model=APIResponse[bool])
+async def purge_user(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete user from system (Super Admin only, hard delete)."""
+    # Check if current user is Super Admin
+    if not current_user.is_superuser:
+        from app.core.exceptions import PermissionDeniedException
+        raise PermissionDeniedException(message="Only Super Admin can permanently purge users.")
+    
+    service = UserService(db)
+    await service.purge_user(request, user_id, current_user)
+    return APIResponse(success=True, message="User permanently purged from the system. This action cannot be undone.", data=True)

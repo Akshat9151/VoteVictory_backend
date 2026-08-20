@@ -3,9 +3,11 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.permissions import DEFAULT_ROLE_PERMISSIONS, PermissionCode
+from app.core.security import get_password_hash
 from app.models.design_template import DesignTemplate
-from app.models.user import Permission, Role, RolePermission
+from app.models.user import Permission, Role, RolePermission, User, UserRole
 
 logger = logging.getLogger("app.bootstrap")
 
@@ -49,6 +51,32 @@ async def seed_system_data(db: AsyncSession) -> None:
             permission = permissions.get(permission_code.value)
             if permission and permission.id not in existing_role_permissions:
                 db.add(RolePermission(role_id=role.id, permission_id=permission.id))
+
+    admin_email = settings.FIRST_SUPER_ADMIN_EMAIL.lower().strip()
+    admin = (await db.execute(select(User).where(User.email == admin_email))).scalars().first()
+    if not admin:
+        admin = User(
+            email=admin_email,
+            phone=settings.FIRST_SUPER_ADMIN_PHONE,
+            password_hash=get_password_hash(settings.FIRST_SUPER_ADMIN_PASSWORD),
+            first_name=settings.FIRST_SUPER_ADMIN_FIRST_NAME,
+            last_name=settings.FIRST_SUPER_ADMIN_LAST_NAME,
+            is_active=True,
+            is_verified=True,
+            is_superuser=True,
+        )
+        db.add(admin)
+        await db.flush()
+
+    super_admin_role = (await db.execute(
+        select(Role).where(Role.code == "SUPER_ADMIN", Role.is_system.is_(True))
+    )).scalars().first()
+    if super_admin_role:
+        role_link = (await db.execute(
+            select(UserRole).where(UserRole.user_id == admin.id, UserRole.role_id == super_admin_role.id)
+        )).scalars().first()
+        if not role_link:
+            db.add(UserRole(user_id=admin.id, role_id=super_admin_role.id))
 
     templates = [
         {

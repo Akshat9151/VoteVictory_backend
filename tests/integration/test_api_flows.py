@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 
@@ -32,6 +34,7 @@ async def test_superadmin_bootstrap_login(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_election_and_voter_flow(client: AsyncClient):
+    voter_id_number = f"RJ2026EPIC{uuid4().hex[:8].upper()}"
     # 1. Login as Super Admin
     login_resp = await client.post("/api/v1/auth/login", json={
         "email": settings.FIRST_SUPER_ADMIN_EMAIL,
@@ -104,7 +107,7 @@ async def test_election_and_voter_flow(client: AsyncClient):
     voter_resp = await client.post("/api/v1/voters/", json={
         "election_id": elec_id,
         "polling_station_id": station_id,
-        "voter_id_number": "RJ2026EPIC001",
+        "voter_id_number": voter_id_number,
         "first_name": "Gopal Lal",
         "last_name": "Gurjar",
         "age": 42,
@@ -136,7 +139,7 @@ async def test_election_and_voter_flow(client: AsyncClient):
 
     # 10. Authenticate for Electronic Voting
     voter_auth_resp = await client.post("/api/v1/voting/auth-ballot", json={
-        "voter_id_number": "RJ2026EPIC001",
+        "voter_id_number": voter_id_number,
         "election_id": elec_id
     })
     assert voter_auth_resp.status_code == 200
@@ -161,7 +164,7 @@ async def test_election_and_voter_flow(client: AsyncClient):
 
     # 12. Attempt Double Voting -> MUST BE REJECTED
     double_auth_resp = await client.post("/api/v1/voting/auth-ballot", json={
-        "voter_id_number": "RJ2026EPIC001",
+        "voter_id_number": voter_id_number,
         "election_id": elec_id
     })
     assert double_auth_resp.status_code == 409 # DOUBLE_VOTING_PREVENTED

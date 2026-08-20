@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit_log
 from app.core.exceptions import ResourceNotFoundException
+from app.models.election import Election
 from app.models.user import User
 from app.models.voter import Voter, VoterStatus, VoterVerification, VotingStatus
 from app.repositories.voter_repo import VoterRepository
@@ -52,7 +53,7 @@ class VoterService:
 
     async def add_voter(self, voter_in: Any, organization_id: Optional[str] = None) -> Voter:
         v_in = voter_in if isinstance(voter_in, VoterCreate) else VoterCreate(**voter_in)
-        return await self.create_voter(request=None, voter_in=v_in, current_user=None)
+        return await self.create_voter(request=None, voter_in=v_in, current_user=None, organization_id=organization_id)
 
     async def add_voters_batch(self, voters_in: List[Any], organization_id: Optional[str] = None) -> List[Voter]:
         created: List[Voter] = []
@@ -67,12 +68,30 @@ class VoterService:
                 if existing:
                     from app.core.exceptions import ConflictException
                     raise ConflictException(f"Duplicate voter ID '{raw_id}' already exists.")
-            voter = await self.create_voter(request=None, voter_in=v_in, current_user=None)
+            voter = await self.create_voter(
+                request=None,
+                voter_in=v_in,
+                current_user=None,
+                organization_id=organization_id,
+            )
             created.append(voter)
         return created
 
-    async def create_voter(self, request: Optional[Request], voter_in: VoterCreate, current_user: Optional[User] = None) -> Voter:
-        org_id = current_user.organization_id if current_user else "default_org"
+    async def create_voter(
+        self,
+        request: Optional[Request],
+        voter_in: VoterCreate,
+        current_user: Optional[User] = None,
+        organization_id: Optional[str] = None,
+    ) -> Voter:
+        org_id = organization_id or (current_user.organization_id if current_user else None)
+        if not org_id and voter_in.election_id:
+            election = (await self.db.execute(
+                select(Election).where(Election.id == voter_in.election_id)
+            )).scalars().first()
+            org_id = election.organization_id if election else None
+        if not org_id:
+            raise ResourceNotFoundException("Organization", "for voter enrollment")
         voter_name = voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}".strip() or "Voter"
         voter_id_num = getattr(voter_in, "id", None) or voter_in.voter_id_number
 

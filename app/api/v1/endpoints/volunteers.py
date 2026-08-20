@@ -16,11 +16,11 @@ from app.schemas.volunteer import (
     VolunteerLeaderboardEntry,
     VolunteerPerformanceOut,
     VolunteerProfileOut,
-    VolunteerStatusUpdate,
     VolunteerTargetCreate,
     VolunteerTargetOut,
     VolunteerTaskCreate,
     VolunteerTaskOut,
+    VolunteerStatusUpdate,
     VolunteerUpdate,
 )
 from app.services.volunteer_service import VolunteerService

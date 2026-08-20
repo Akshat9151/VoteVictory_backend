@@ -6,6 +6,15 @@ from httpx import AsyncClient
 async def test_broadcast_and_delivery_log_flow(client: AsyncClient, admin_token: str):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
+    voter_res = await client.post("/api/v1/voters/", json={
+        "voter_id_number": "BROADCAST-TEST-001",
+        "first_name": "Broadcast",
+        "last_name": "Recipient",
+        "ward_name": "Ward 02",
+        "phone_number": "+919000000001",
+    }, headers=headers)
+    assert voter_res.status_code == 200
+
     # 1. Fetch initial logs
     initial_logs_res = await client.get("/api/v1/broadcast/delivery-logs")
     assert initial_logs_res.status_code == 200

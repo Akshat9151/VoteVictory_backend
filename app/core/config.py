@@ -123,9 +123,11 @@ class Settings(BaseSettings):
     def assemble_db_url(cls, v: str) -> str:
         if isinstance(v, str):
             if v.startswith("postgres://"):
-                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+                v = v.replace("postgres://", "postgresql+asyncpg://", 1)
             if v.startswith("postgresql://") and not v.startswith("postgresql+"):
-                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if "sslmode=" in v:
+                v = v.replace("sslmode=", "ssl=")
         return v
 
     @field_validator("DATABASE_SYNC_URL", mode="before")
@@ -133,9 +135,11 @@ class Settings(BaseSettings):
     def assemble_sync_db_url(cls, v: str) -> str:
         if isinstance(v, str):
             if v.startswith("postgres://"):
-                return v.replace("postgres://", "postgresql://", 1)
+                v = v.replace("postgres://", "postgresql://", 1)
             if v.startswith("postgresql+asyncpg://"):
-                return v.replace("postgresql+asyncpg://", "postgresql://", 1)
+                v = v.replace("postgresql+asyncpg://", "postgresql://", 1)
+            if "ssl=" in v and "sslmode=" not in v:
+                v = v.replace("ssl=", "sslmode=")
         return v
 
 

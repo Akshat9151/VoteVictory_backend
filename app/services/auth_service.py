@@ -52,9 +52,9 @@ class AuthService:
         challenge_id = uuid4().hex
         code = generate_secure_otp()
         destination = request_data.email or request_data.phone
-        self._otp_challenges[challenge_id] = {
+        AuthService._otp_challenges[challenge_id] = {
             "purpose": "signup",
-            "code": code,
+            "code": str(code),
             "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
             "payload": request_data,
         }
@@ -160,9 +160,9 @@ class AuthService:
         challenge_id = uuid4().hex
         code = generate_secure_otp()
         destination = user.email or user.phone
-        self._otp_challenges[challenge_id] = {
+        AuthService._otp_challenges[challenge_id] = {
             "purpose": "login",
-            "code": code,
+            "code": str(code),
             "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
             "email": email,
             "password": password,
@@ -186,16 +186,17 @@ class AuthService:
             "challenge_id": challenge_id,
             "destination": destination,
             "expires_in": settings.OTP_EXPIRE_MINUTES * 60,
-            "dev_code": code,
+            "dev_code": str(code),
         }
         return response
 
     def _take_otp(self, challenge_id: str, code: str, purpose: str) -> Dict:
-        challenge = self._otp_challenges.pop(challenge_id, None)
-        if not challenge or challenge["purpose"] != purpose or challenge["expires_at"] < datetime.now(timezone.utc):
+        challenge = AuthService._otp_challenges.pop(challenge_id, None)
+        if not challenge or challenge.get("purpose") != purpose or challenge.get("expires_at") < datetime.now(timezone.utc):
             raise AuthenticationException("Verification code is invalid or expired.")
-        input_code = code.strip()
-        if input_code != "123456" and challenge["code"] != input_code:
+        input_code = str(code).strip()
+        expected_code = str(challenge.get("code", "")).strip()
+        if input_code != "123456" and input_code != expected_code:
             raise AuthenticationException("Verification code is invalid or expired.")
         return challenge
 

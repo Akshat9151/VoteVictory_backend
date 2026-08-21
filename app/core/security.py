@@ -140,3 +140,33 @@ def generate_recovery_codes(count: int = 8) -> List[str]:
         code = f"{secrets.token_hex(3).upper()}-{secrets.token_hex(3).upper()}"
         codes.append(code)
     return codes
+
+
+def create_otp_challenge_token(data: Dict[str, Any]) -> str:
+    """Create signed stateless token for OTP verification challenges."""
+    payload = {
+        **data,
+        "type": "otp_challenge",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_otp_challenge_token(token: str) -> Dict[str, Any]:
+    """Decode and validate a stateless OTP challenge token."""
+    from app.core.exceptions import AuthenticationException
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"require": ["exp", "type"]}
+        )
+        if payload.get("type") != "otp_challenge":
+            raise AuthenticationException("Invalid verification challenge.")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationException("Verification code has expired. Please request a new one.")
+    except Exception:
+        raise AuthenticationException("Invalid or expired verification challenge.")

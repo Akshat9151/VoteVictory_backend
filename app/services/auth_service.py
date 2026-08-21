@@ -18,6 +18,8 @@ from app.core.exceptions import (
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_otp_challenge_token,
+    decode_otp_challenge_token,
     generate_recovery_codes,
     generate_totp_secret,
     get_password_hash,
@@ -49,17 +51,17 @@ class AuthService:
             from app.core.exceptions import DuplicateResourceException
             raise DuplicateResourceException("User", "email", request_data.email)
 
-        challenge_id = uuid4().hex
         code = generate_secure_otp()
         destination = request_data.email or request_data.phone
-        AuthService._otp_challenges[challenge_id] = {
+        payload_data = request_data.model_dump() if hasattr(request_data, "model_dump") else dict(request_data)
+        challenge_token = create_otp_challenge_token({
             "purpose": "signup",
             "code": str(code),
-            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
-            "payload": request_data,
-        }
+            "destination": destination,
+            "payload": payload_data,
+        })
         await self._send_otp(destination, code)
-        return self._otp_response(challenge_id, destination, code)
+        return self._otp_response(challenge_token, destination, code)
 
     async def verify_signup_otp(self, request: Optional[Request], challenge_id: str, code: str) -> Dict:
         """Verify signup OTP and create account without issuing tokens."""
@@ -68,7 +70,8 @@ class AuthService:
         # Create user and organization without issuing tokens
         from app.core.exceptions import DuplicateResourceException
 
-        reg_in = challenge["payload"]
+        raw_payload = challenge["payload"]
+        reg_in = UserRegisterRequest(**raw_payload) if isinstance(raw_payload, dict) else raw_payload
         
         if await self.user_repo.get_by_email(reg_in.email):
             raise DuplicateResourceException("User", "email", reg_in.email)
@@ -157,18 +160,17 @@ class AuthService:
         user = await self.user_repo.get_by_email(email)
         if not user or not verify_password(password, user.password_hash):
             raise AuthenticationException("Invalid email or password.")
-        challenge_id = uuid4().hex
         code = generate_secure_otp()
         destination = user.email or user.phone
-        AuthService._otp_challenges[challenge_id] = {
+        challenge_token = create_otp_challenge_token({
             "purpose": "login",
             "code": str(code),
-            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+            "destination": destination,
             "email": email,
             "password": password,
-        }
+        })
         await self._send_otp(destination, code)
-        return self._otp_response(challenge_id, destination, code)
+        return self._otp_response(challenge_token, destination, code)
 
     async def verify_login_otp(self, request: Optional[Request], challenge_id: str, code: str) -> TokenResponse:
         challenge = self._take_otp(challenge_id, code, "login")
@@ -191,9 +193,9 @@ class AuthService:
         return response
 
     def _take_otp(self, challenge_id: str, code: str, purpose: str) -> Dict:
-        challenge = AuthService._otp_challenges.pop(challenge_id, None)
-        if not challenge or challenge.get("purpose") != purpose or challenge.get("expires_at") < datetime.now(timezone.utc):
-            raise AuthenticationException("Verification code is invalid or expired.")
+        challenge = decode_otp_challenge_token(challenge_id)
+        if challenge.get("purpose") != purpose:
+            raise AuthenticationException("Verification code is invalid for this action.")
         input_code = str(code).strip()
         expected_code = str(challenge.get("code", "")).strip()
         if input_code != "123456" and input_code != expected_code:

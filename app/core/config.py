@@ -118,5 +118,25 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            if v.startswith("postgresql://") and not v.startswith("postgresql+"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
+    @field_validator("DATABASE_SYNC_URL", mode="before")
+    @classmethod
+    def assemble_sync_db_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql://", 1)
+            if v.startswith("postgresql+asyncpg://"):
+                return v.replace("postgresql+asyncpg://", "postgresql://", 1)
+        return v
+
 
 settings = Settings()

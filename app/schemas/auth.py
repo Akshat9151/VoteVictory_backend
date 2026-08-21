@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class LoginRequest(BaseModel):
@@ -69,26 +69,29 @@ class UserRegisterRequest(BaseModel):
     organization_name: Optional[str] = None
     email: str
     password: str = Field(..., min_length=6)
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    first_name: Optional[str] = "User"
+    last_name: Optional[str] = ""
     phone: Optional[str] = None
     full_name: Optional[str] = None
 
-    def __init__(self, **data):
-        # Support camelCase fullName or snake_case full_name
-        full = data.get("full_name") or data.get("fullName")
-        if full:
-            data["full_name"] = full
-            parts = full.strip().split()
+    @model_validator(mode="before")
+    @classmethod
+    def process_full_name(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            full = data.get("full_name") or data.get("fullName")
+            if full:
+                data["full_name"] = full
+                parts = str(full).strip().split()
+                if not data.get("first_name"):
+                    data["first_name"] = parts[0] if parts else "User"
+                if not data.get("last_name"):
+                    data["last_name"] = " ".join(parts[1:]) if len(parts) > 1 else ""
             if not data.get("first_name"):
-                data["first_name"] = parts[0] if parts else "User"
+                email = data.get("email", "")
+                data["first_name"] = email.split("@")[0] if "@" in email else "User"
             if not data.get("last_name"):
-                data["last_name"] = " ".join(parts[1:]) if len(parts) > 1 else ""
-        if not data.get("first_name"):
-            data["first_name"] = data.get("email", "").split("@")[0] or "User"
-        if not data.get("last_name"):
-            data["last_name"] = ""
-        super().__init__(**data)
+                data["last_name"] = ""
+        return data
 
 
 class SignupOtpRequest(UserRegisterRequest):

@@ -250,8 +250,44 @@ def upgrade() -> None:
     op.create_index(op.f('ix_audit_logs_organization_id'), 'audit_logs', ['organization_id'], unique=False)
     op.create_index(op.f('ix_audit_logs_action'), 'audit_logs', ['action'], unique=False)
 
+    # 12. Elections
+    op.create_table(
+        'elections',
+        sa.Column('id', sa.String(length=64), nullable=False),
+        sa.Column('organization_id', sa.String(length=64), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('start_date', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('end_date', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('status', sa.String(length=32), nullable=False, default='planned'),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_elections_organization_id'), 'elections', ['organization_id'], unique=False)
+
+    # 13. Design Templates
+    op.create_table(
+        'design_templates',
+        sa.Column('id', sa.String(length=64), nullable=False),
+        sa.Column('organization_id', sa.String(length=64), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('template_type', sa.String(length=100), nullable=False),
+        sa.Column('template_json', sa.JSON(), nullable=False),
+        sa.Column('is_active', sa.Boolean(), nullable=False, default=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_design_templates_organization_id'), 'design_templates', ['organization_id'], unique=False)
+
 
 def downgrade() -> None:
+    op.drop_table('design_templates')
+    op.drop_table('elections')
     op.drop_table('audit_logs')
     op.drop_table('delivery_logs')
     op.drop_table('expenses')

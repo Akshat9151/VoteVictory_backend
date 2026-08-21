@@ -1,24 +1,25 @@
 import asyncio
 from logging.config import fileConfig
-from sqlalchemy import pool
+
+from alembic import context
+from sqlalchemy import create_engine, pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
 
 from app.core.config import settings
 from app.core.database import Base
-from app.models import * # Import all models so metadata is populated
+from app.models import *  # Import all models so metadata is populated
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
@@ -34,33 +35,36 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_async_migrations() -> None:
-    """Run migrations in 'online' mode with async engine."""
-    configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
-
-    connectable = async_engine_from_config(
-        configuration,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
-
-
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    asyncio.run(run_async_migrations())
+    """Run migrations using a synchronous engine, with PostgreSQL-specific compatibility only where needed."""
+    sync_url = settings.DATABASE_SYNC_URL
+    connectable = create_engine(sync_url, poolclass=pool.NullPool)
+
+    if "sqlite" not in sync_url:
+        with connectable.connect() as connection:
+            connection.execute(text(
+                "CREATE TABLE IF NOT EXISTS alembic_version "
+                "(version_num VARCHAR(255) NOT NULL, "
+                "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num));"
+            ))
+            result = connection.execute(text(
+                "SELECT character_maximum_length FROM information_schema.columns "
+                "WHERE table_name = 'alembic_version' AND column_name = 'version_num';"
+            ))
+            row = result.fetchone()
+            if row and row[0] and row[0] < 255:
+                connection.execute(text(
+                    "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255);"
+                ))
+            connection.commit()
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():

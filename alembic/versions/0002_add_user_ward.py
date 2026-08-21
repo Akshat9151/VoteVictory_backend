@@ -15,7 +15,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("ward", sa.String(length=150), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col["name"] for col in inspector.get_columns("users")]
+    if "ward" not in columns:
+        op.add_column("users", sa.Column("ward", sa.String(length=150), nullable=True))
 
 
 def downgrade() -> None:

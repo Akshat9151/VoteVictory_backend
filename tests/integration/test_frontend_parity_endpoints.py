@@ -52,8 +52,9 @@ async def test_design_templates_crud(client: AsyncClient, admin_token: str):
 
 
 @pytest.mark.asyncio
-async def test_field_activities_and_attendance(client: AsyncClient, volunteer_token: str):
-    headers = {"Authorization": f"Bearer {volunteer_token}"}
+async def test_field_activities_and_attendance(client: AsyncClient, volunteer_token: str, admin_token: str):
+    vol_headers = {"Authorization": f"Bearer {volunteer_token}"}
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
     # 1. Submit field activity
     activity_payload = {
@@ -66,19 +67,19 @@ async def test_field_activities_and_attendance(client: AsyncClient, volunteer_to
         "voters_contacted": 25,
         "slips_distributed": 25,
     }
-    submit_res = await client.post("/api/v1/field-activities/submit", json=activity_payload, headers=headers)
+    submit_res = await client.post("/api/v1/field-activities/submit", json=activity_payload, headers=vol_headers)
     assert submit_res.status_code == 201
     act_data = submit_res.json()
     assert act_data["voters_contacted"] == 25
     act_id = act_data["id"]
 
     # 2. Update status (admin verify)
-    status_res = await client.put(f"/api/v1/field-activities/{act_id}/status", json={"status": "VERIFIED"}, headers=headers)
+    status_res = await client.put(f"/api/v1/field-activities/{act_id}/status", json={"status": "VERIFIED"}, headers=admin_headers)
     assert status_res.status_code == 200
     assert status_res.json()["status"] in ["Verified", "VERIFIED"]
 
     # 3. List activities
-    list_res = await client.get("/api/v1/field-activities?ward=Ward 02", headers=headers)
+    list_res = await client.get("/api/v1/field-activities?ward=Ward 02", headers=vol_headers)
     assert list_res.status_code == 200
     assert any(a["id"] == act_id for a in list_res.json())
 
@@ -86,15 +87,18 @@ async def test_field_activities_and_attendance(client: AsyncClient, volunteer_to
     checkin_res = await client.post(
         "/api/v1/attendance/check-in",
         json={"volunteer_name": "Ramesh Kumar", "ward": "Ward 02", "location": "Booth 02 Gate"},
-        headers=headers,
+        headers=vol_headers,
     )
     assert checkin_res.status_code == 201
     assert checkin_res.json()["status"] == "Present"
 
 
 @pytest.mark.asyncio
-async def test_tasks_lifecycle(client: AsyncClient, admin_token: str):
-    headers = {"Authorization": f"Bearer {admin_token}"}
+async def test_tasks_lifecycle(client: AsyncClient, admin_token: str, volunteer_token: str):
+    from app.core.security import decode_access_token
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    vol_payload = decode_access_token(volunteer_token)
+    assignee_id = vol_payload["sub"]
 
     # 1. Create task
     task_payload = {
@@ -102,33 +106,35 @@ async def test_tasks_lifecycle(client: AsyncClient, admin_token: str):
         "description": "Ensure 100% slip distribution before Friday",
         "priority": "high",
         "deadline": "2026-08-25",
+        "assigned_to_id": assignee_id,
         "ward_or_booth": "Ward 03",
         "category": "Voter Slip Distribution",
     }
-    task_res = await client.post("/api/v1/tasks/create", json=task_payload, headers=headers)
+    task_res = await client.post("/api/v1/tasks/create", json=task_payload, headers=admin_headers)
     assert task_res.status_code == 201
     task_data = task_res.json()
     task_id = task_data["id"]
     assert task_data["title"] == "Distribute Voter Slips in Ward 03"
 
     # 2. Update task status to In Progress
-    put_status_res = await client.put(f"/api/v1/tasks/{task_id}/status", json={"status": "in_progress"}, headers=headers)
+    put_status_res = await client.put(f"/api/v1/tasks/{task_id}/status", json={"status": "in_progress"}, headers=admin_headers)
     assert put_status_res.status_code == 200
     assert put_status_res.json()["status"] in ["in_progress", "IN_PROGRESS"]
 
     # 3. Update task details
-    put_task_res = await client.put(f"/api/v1/tasks/{task_id}", json={"title": "Updated Task Title"}, headers=headers)
+    put_task_res = await client.put(f"/api/v1/tasks/{task_id}", json={"title": "Updated Task Title"}, headers=admin_headers)
     assert put_task_res.status_code == 200
     assert put_task_res.json()["title"] == "Updated Task Title"
 
     # 4. Delete task
-    del_res = await client.delete(f"/api/v1/tasks/{task_id}", headers=headers)
+    del_res = await client.delete(f"/api/v1/tasks/{task_id}", headers=admin_headers)
     assert del_res.status_code == 204
 
 
 @pytest.mark.asyncio
-async def test_complaints_and_expenses_election_endpoints(client: AsyncClient, admin_token: str):
+async def test_complaints_and_expenses_election_endpoints(client: AsyncClient, admin_token: str, superadmin_token: str):
     headers = {"Authorization": f"Bearer {admin_token}"}
+    super_headers = {"Authorization": f"Bearer {superadmin_token}"}
     election_id = "test-elec-parity-1"
 
     # 1. Add election complaint
@@ -146,8 +152,8 @@ async def test_complaints_and_expenses_election_endpoints(client: AsyncClient, a
     assert comp_json["data"]["category"] == "Water Supply"
     comp_id = comp_json["data"]["id"]
 
-    # 2. Update complaint status
-    up_comp_res = await client.put(f"/api/v1/complaints/{comp_id}/status", json={"status": "In Progress"}, headers=headers)
+    # 2. Update complaint status (requires Super Admin)
+    up_comp_res = await client.put(f"/api/v1/complaints/{comp_id}/status", json={"status": "In Progress"}, headers=super_headers)
     assert up_comp_res.status_code == 200
     assert up_comp_res.json()["status"] == "In Progress"
 

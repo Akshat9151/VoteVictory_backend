@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     phone: Optional[str] = None
+    ward: Optional[str] = None
     is_active: bool = True
 
 
@@ -22,6 +23,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
+    ward: Optional[str] = None
     is_active: Optional[bool] = None
     organization_id: Optional[str] = None
 

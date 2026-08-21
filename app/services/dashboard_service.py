@@ -67,7 +67,6 @@ class DashboardService:
         ]
 
         return SuperAdminDashboardResponse(
-            total_organizations=org_count,
             active_organizations=org_count,
             total_users=user_count,
             active_elections=active_elec,

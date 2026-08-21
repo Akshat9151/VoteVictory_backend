@@ -88,6 +88,8 @@ class TaskResponse(BaseModel):
     deadline: Optional[str] = None
     assigned_to_id: Optional[str] = None
     assigned_volunteer_name: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    assigned_to_role: Optional[str] = None
     ward_or_booth: Optional[str] = None
     category: Optional[str] = None
     created_at: datetime

@@ -25,10 +25,11 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://0.0.0.0:5173",
         "http://127.0.0.1:5500",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-        "*"
+        "http://0.0.0.0:8000"
     ]
 
     # Database
@@ -86,6 +87,7 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
+    TWILIO_WHATSAPP_FROM_NUMBER: str = ""
 
     WHATSAPP_PROVIDER: str = "mock" # mock | meta_cloud
     META_WHATSAPP_ACCESS_TOKEN: str = ""

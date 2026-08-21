@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -14,8 +15,9 @@ class SavedDesignCreate(BaseModel):
 
 class SavedDesignResponse(SavedDesignCreate):
     id: str
-    organization_id: str
+    organization_id: Optional[str] = None
     user_id: Optional[str] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True

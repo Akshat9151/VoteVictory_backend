@@ -36,6 +36,7 @@ def serialize_user(user: User) -> UserResponse:
         first_name=user.first_name,
         last_name=user.last_name,
         phone=user.phone,
+        ward=user.ward,
         organization_id=user.organization_id,
         is_active=user.is_active,
         is_verified=user.is_verified,

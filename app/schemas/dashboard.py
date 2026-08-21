@@ -110,7 +110,6 @@ class AdminDashboardResponse(BaseModel):
 
 
 class SuperAdminDashboardResponse(BaseModel):
-    total_organizations: int = 0
     active_organizations: int = 0
     total_users: int = 0
     active_elections: int = 0

@@ -83,8 +83,21 @@ cp .env.example .env
 # Edit .env for your database, Redis, and secret keys
 ```
 
+### Broadcast provider credentials
+
+Broadcast groups route each voter independently using the saved WhatsApp/SMS channel. To send real messages, configure these values in `.env`:
+
+- `TWILIO_ACCOUNT_SID`: Twilio Account SID.
+- `TWILIO_AUTH_TOKEN`: Twilio Auth Token.
+- `TWILIO_FROM_NUMBER`: approved SMS sender number in E.164 format, for example `+14155550100`.
+- `TWILIO_WHATSAPP_FROM_NUMBER`: approved WhatsApp-enabled Twilio sender number in E.164 format, without the `whatsapp:` prefix.
+- Set `SMS_PROVIDER=twilio` and `WHATSAPP_PROVIDER=twilio` to use Twilio for both channels.
+
+Do not put credentials in source control. The default `mock` providers are for local development only and do not deliver messages to phones. The group send response and `broadcast_logs` always report each provider attempt, including failures.
+
 ### 3. Run Migrations & Start Server
 ```bash
+alembic upgrade head
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 

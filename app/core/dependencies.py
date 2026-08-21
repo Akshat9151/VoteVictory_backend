@@ -124,19 +124,20 @@ def require_permissions(*required_permissions: str) -> Callable:
             return current_user
 
         user_permissions: set[str] = set()
+        role_codes: set[str] = set()
         if hasattr(current_user, "roles") and current_user.roles:
             for user_role in current_user.roles:
-                if hasattr(user_role, "role") and hasattr(user_role.role, "permissions"):
-                    for rp in user_role.role.permissions:
+                role = getattr(user_role, "role", None)
+                role_code = str(getattr(role, "code", "")).upper()
+                if role_code:
+                    role_codes.add(role_code)
+                if role and hasattr(role, "permissions"):
+                    for rp in role.permissions:
                         if hasattr(rp, "permission") and hasattr(rp.permission, "code"):
                             user_permissions.add(rp.permission.code)
 
         for perm in required_permissions:
             if perm not in user_permissions:
-                # Also allow superadmin/admin fallback for standard operations
-                role_val = (getattr(current_user, "role", "") or "").lower()
-                if "superadmin" in role_val or "admin" in role_val:
-                    continue
                 raise PermissionDeniedException(
                     permission=perm,
                     message=f"Access denied. Required permission '{perm}' is missing."

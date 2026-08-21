@@ -6,10 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_optional_current_user
+from app.core.exceptions import PermissionDeniedException
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.common import APIResponse, PaginatedResponse, PaginationMeta
-from app.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintStatusUpdate
+from app.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintStatusUpdate, ComplaintUpdate
 from app.services.complaint_service import ComplaintService
 
 router = APIRouter(prefix="/complaints", tags=["Complaints & Grievances"])
@@ -29,7 +30,9 @@ async def get_complaints(
     """Retrieve voter grievance complaints."""
     org_id = current_user.organization_id if current_user else await get_default_org_id(db)
     service = ComplaintService(db)
-    return await service.get_complaints(organization_id=org_id)
+    if current_user and current_user.is_superuser:
+        return await service.get_complaints(organization_id=None)
+    return await service.get_complaints(organization_id=org_id, created_by_user_id=current_user.id if current_user else None)
 
 
 @router.get("/election/{election_id}", response_model=APIResponse[PaginatedResponse[ComplaintResponse]])
@@ -43,7 +46,10 @@ async def list_election_complaints(
     """Retrieve grievances associated with an active election."""
     org_id = current_user.organization_id if current_user else await get_default_org_id(db)
     service = ComplaintService(db)
-    items = await service.get_complaints(organization_id=org_id)
+    if current_user and current_user.is_superuser:
+        items = await service.get_complaints(organization_id=None, election_id=election_id)
+    else:
+        items = await service.get_complaints(organization_id=org_id, election_id=election_id, created_by_user_id=current_user.id if current_user else None)
     total_items = len(items)
     pagination = PaginationMeta(
         page=page,
@@ -65,11 +71,13 @@ async def list_election_complaints(
 async def add_complaint(
     request: Request,
     complaint: ComplaintCreate,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a new voter complaint or civic issue."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    if current_user.is_superuser:
+        raise PermissionDeniedException(message="Super Admin can review complaints but cannot create them.")
+    org_id = current_user.organization_id
     service = ComplaintService(db)
     client_ip = request.client.host if request.client else None
     return await service.add_complaint(
@@ -85,11 +93,13 @@ async def add_election_complaint(
     election_id: str,
     request: Request,
     complaint: ComplaintCreate,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a complaint for a specific election."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    if current_user.is_superuser:
+        raise PermissionDeniedException(message="Super Admin can review complaints but cannot create them.")
+    org_id = current_user.organization_id
     complaint.election_id = election_id
     service = ComplaintService(db)
     client_ip = request.client.host if request.client else None
@@ -112,11 +122,13 @@ async def update_complaint_status(
     id: str,
     status_update: ComplaintStatusUpdate,
     request: Request,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Update complaint status (Open -> In Progress -> Resolved) with audit logging."""
-    org_id = current_user.organization_id if current_user else None
+    if not current_user.is_superuser:
+        raise PermissionDeniedException(message="Only Super Admin can change complaint status.")
+    org_id = None if current_user.is_superuser else current_user.organization_id
     service = ComplaintService(db)
     client_ip = request.client.host if request.client else None
     return await service.update_status(
@@ -126,3 +138,23 @@ async def update_complaint_status(
         user=current_user,
         ip_address=client_ip,
     )
+
+
+@router.put("/{id}", response_model=ComplaintResponse)
+async def update_complaint(id: str, complaint: ComplaintUpdate, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.is_superuser:
+        raise PermissionDeniedException(message="Super Admin can only change complaint status.")
+    existing = await ComplaintService(db).repo.get_by_id(id=id, organization_id=current_user.organization_id)
+    if not existing or existing.created_by_user_id != current_user.id:
+        raise PermissionDeniedException(message="You can only edit complaints you created.")
+    return await ComplaintService(db).update_complaint(id, complaint, current_user.organization_id, current_user, request.client.host if request.client else None)
+
+
+@router.delete("/{id}", response_model=bool)
+async def delete_complaint(id: str, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.is_superuser:
+        raise PermissionDeniedException(message="Super Admin cannot delete complaints.")
+    existing = await ComplaintService(db).repo.get_by_id(id=id, organization_id=current_user.organization_id)
+    if not existing or existing.created_by_user_id != current_user.id:
+        raise PermissionDeniedException(message="You can only delete complaints you created.")
+    return await ComplaintService(db).delete_complaint(id, current_user.organization_id, current_user, request.client.host if request.client else None)

@@ -24,6 +24,10 @@ class ComplaintStatusUpdate(BaseModel):
     status: str  # Open, In Progress, Resolved, OPEN, IN_PROGRESS, RESOLVED
 
 
+class ComplaintUpdate(ComplaintBase):
+    pass
+
+
 class ComplaintResponse(BaseModel):
     id: str
     organization_id: Optional[str] = None
@@ -37,6 +41,8 @@ class ComplaintResponse(BaseModel):
     description: Optional[str] = None
     reported_by_name: Optional[str] = None
     reported_by_phone: Optional[str] = None
+    submitted_by_name: Optional[str] = None
+    submitted_by_user_id: Optional[str] = None
     date: Optional[str] = None
     status: str
     created_at: Optional[str] = None

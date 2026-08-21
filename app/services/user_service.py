@@ -34,8 +34,8 @@ class UserService:
         if current_user.is_superuser:
             if requested_role not in {RoleCode.ADMIN.value, RoleCode.VOLUNTEER.value}:
                 raise PermissionDeniedException(message="Super Admin can create Admin or Volunteer accounts.")
-        elif requested_role != RoleCode.VOLUNTEER.value:
-            raise PermissionDeniedException(message="Admin can create only Volunteer accounts.")
+        elif requested_role not in {RoleCode.ADMIN.value, RoleCode.VOLUNTEER.value}:
+            raise PermissionDeniedException(message="Admin can create Admin or Volunteer accounts.")
 
         # Enforce organization scope for every account created from Team.
         org_id = current_user.organization_id
@@ -45,6 +45,7 @@ class UserService:
             first_name=user_in.first_name.strip(),
             last_name=user_in.last_name.strip(),
             phone=user_in.phone,
+            ward=user_in.ward,
             organization_id=org_id,
             password_hash=get_password_hash(user_in.password),
             is_active=user_in.is_active,
@@ -129,6 +130,8 @@ class UserService:
             user.last_name = user_in.last_name.strip()
         if user_in.phone is not None:
             user.phone = user_in.phone
+        if user_in.ward is not None:
+            user.ward = user_in.ward.strip()
         if user_in.is_active is not None:
             user.is_active = user_in.is_active
 

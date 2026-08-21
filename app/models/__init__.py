@@ -1,10 +1,11 @@
 from app.models.activity import ActivityStatus, AttendanceStatus, FieldActivityLog, VolunteerAttendanceRecord
 from app.models.alert import AlertSeverity, OperationalAlert, OperationalAlertType
+from app.models.app_notification import AppNotification
 from app.models.area import Area, Booth, BoothStatus, MapStatus, Ward
 from app.models.audit import AuditLog, SecurityEvent, SecuritySeverity
 from app.models.banner import Banner, BannerStatus
 from app.models.base import BaseModel
-from app.models.broadcast import DeliveryLog
+from app.models.broadcast import BroadcastGroup, BroadcastGroupMember, BroadcastLog, DeliveryLog
 from app.models.candidate import Candidate, CandidateDocument, CandidateStatus
 from app.models.complaint import Complaint
 from app.models.data_collection import (
@@ -41,6 +42,7 @@ from app.models.notification import (
 )
 from app.models.organization import Organization, OrganizationStatus
 from app.models.polling_station import PollingStation, PollingStationStatus, VolunteerAssignment
+from app.models.poster_share import PosterShare
 from app.models.result import Result, ResultStatus, ResultSummary
 from app.models.subscription import (
     CampaignSubscription,
@@ -111,6 +113,9 @@ __all__ = [
     "Complaint",
     "Expense",
     "DeliveryLog",
+    "BroadcastGroup",
+    "BroadcastGroupMember",
+    "BroadcastLog",
     "DataSubmission",
     "DataQualityCheck",
     "DataDuplicate",
@@ -143,6 +148,8 @@ __all__ = [
     "OperationalAlert",
     "OperationalAlertType",
     "AlertSeverity",
+    "AppNotification",
+    "PosterShare",
     "AuditLog",
     "SecurityEvent",
     "SecuritySeverity",

@@ -46,7 +46,7 @@ async def test_team_and_volunteers_flow(client: AsyncClient, admin_token: str):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     # Get Team
-    team_res = await client.get("/api/v1/team")
+    team_res = await client.get("/api/v1/team", headers=headers)
     assert team_res.status_code == 200
     assert isinstance(team_res.json(), list)
 
@@ -64,7 +64,7 @@ async def test_team_and_volunteers_flow(client: AsyncClient, admin_token: str):
     assert post_res.json()["name"] == "Om Prakash"
 
     # Get Volunteers
-    vol_res = await client.get("/api/v1/volunteers")
+    vol_res = await client.get("/api/v1/volunteers", headers=headers)
     assert vol_res.status_code == 200
     assert isinstance(vol_res.json(), list)
 
@@ -74,7 +74,7 @@ async def test_voters_flow(client: AsyncClient, admin_token: str):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     # 1. Get Voters
-    get_res = await client.get("/api/v1/voters")
+    get_res = await client.get("/api/v1/voters", headers=headers)
     assert get_res.status_code == 200
     assert isinstance(get_res.json(), list)
 
@@ -103,7 +103,7 @@ async def test_voters_flow(client: AsyncClient, admin_token: str):
     assert len(batch_res.json()) == 2
 
     # 4. Audience Split
-    split_res = await client.get("/api/v1/voters/audience-split")
+    split_res = await client.get("/api/v1/voters/audience-split", headers=headers)
     assert split_res.status_code == 200
     split_data = split_res.json()
     assert "whatsapp" in split_data
@@ -112,12 +112,12 @@ async def test_voters_flow(client: AsyncClient, admin_token: str):
 
 
 @pytest.mark.asyncio
-async def test_complaints_flow(client: AsyncClient, admin_token: str, volunteer_token: str):
+async def test_complaints_flow(client: AsyncClient, superadmin_token: str, volunteer_token: str):
     vol_headers = {"Authorization": f"Bearer {volunteer_token}"}
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    admin_headers = {"Authorization": f"Bearer {superadmin_token}"}
 
     # 1. Get Complaints
-    get_res = await client.get("/api/v1/complaints")
+    get_res = await client.get("/api/v1/complaints", headers=admin_headers)
     assert get_res.status_code == 200
     assert isinstance(get_res.json(), list)
 
@@ -133,7 +133,7 @@ async def test_complaints_flow(client: AsyncClient, admin_token: str, volunteer_
     assert post_res.status_code == 200
     created_id = post_res.json()["id"]
 
-    # 3. Patch Status (Admin updates)
+    # 3. Patch Status (Super Admin updates)
     patch_res = await client.patch(
         f"/api/v1/complaints/{created_id}/status",
         json={"status": "In Progress"},

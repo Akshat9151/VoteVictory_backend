@@ -26,7 +26,7 @@ class SMSProviderAdapter(NotificationProvider):
         template_id: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None
     ) -> ProviderSendResult:
-        if self.provider == "mock" or not self.account_sid:
+        if self.provider == "mock":
             # Production simulated mock provider
             msg_id = f"mock_sms_{uuid.uuid4().hex[:12]}"
             logger.info(f"[MOCK SMS DISPATCH] To: {recipient_address} | Body: {content}")
@@ -35,6 +35,13 @@ class SMSProviderAdapter(NotificationProvider):
                 provider_message_id=msg_id,
                 status="SENT",
                 raw_response={"provider": "mock_sms", "msg_id": msg_id}
+            )
+
+        if not self.account_sid or not self.auth_token or not self.from_number:
+            return ProviderSendResult(
+                success=False,
+                status="FAILED",
+                error_message="SMS provider credentials are not configured.",
             )
 
         # Real Twilio API integration

@@ -17,6 +17,9 @@ class WhatsAppProviderAdapter(NotificationProvider):
         self.provider = settings.WHATSAPP_PROVIDER
         self.access_token = settings.META_WHATSAPP_ACCESS_TOKEN
         self.phone_number_id = settings.META_WHATSAPP_PHONE_NUMBER_ID
+        self.twilio_account_sid = settings.TWILIO_ACCOUNT_SID
+        self.twilio_auth_token = settings.TWILIO_AUTH_TOKEN
+        self.twilio_from_number = settings.TWILIO_WHATSAPP_FROM_NUMBER
         self.app_secret = settings.META_WHATSAPP_APP_SECRET or settings.WEBHOOK_SECRET_WHATSAPP
 
     async def send_message(
@@ -28,7 +31,7 @@ class WhatsAppProviderAdapter(NotificationProvider):
     ) -> ProviderSendResult:
         clean_phone = recipient_address.replace("+", "").replace(" ", "").replace("-", "")
 
-        if self.provider == "mock" or not self.access_token:
+        if self.provider == "mock":
             msg_id = f"wamid.mock_{uuid.uuid4().hex[:16]}"
             logger.info(f"[MOCK WHATSAPP DISPATCH] To: {clean_phone} | Msg: {content}")
             return ProviderSendResult(
@@ -37,6 +40,35 @@ class WhatsAppProviderAdapter(NotificationProvider):
                 status="SENT",
                 raw_response={"messaging_product": "whatsapp", "messages": [{"id": msg_id}]}
             )
+
+        if self.provider == "twilio":
+            if not self.twilio_account_sid or not self.twilio_auth_token or not self.twilio_from_number:
+                return ProviderSendResult(success=False, status="FAILED", error_message="Twilio WhatsApp credentials are not configured.")
+            try:
+                url = f"https://api.twilio.com/2010-04-01/Accounts/{self.twilio_account_sid}/Messages.json"
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(
+                        url,
+                        auth=(self.twilio_account_sid, self.twilio_auth_token),
+                        data={
+                            "To": f"whatsapp:{clean_phone}",
+                            "From": f"whatsapp:{self.twilio_from_number}",
+                            "Body": content,
+                        },
+                    )
+                    data = resp.json()
+                    return ProviderSendResult(
+                        success=resp.status_code in [200, 201],
+                        provider_message_id=data.get("sid"),
+                        status="SENT" if resp.status_code in [200, 201] else "FAILED",
+                        error_message=data.get("message") if resp.status_code not in [200, 201] else None,
+                        raw_response=data,
+                    )
+            except Exception as e:
+                return ProviderSendResult(success=False, status="FAILED", error_message=str(e))
+
+        if not self.access_token or not self.phone_number_id:
+            return ProviderSendResult(success=False, status="FAILED", error_message="WhatsApp provider credentials are not configured.")
 
         # Meta WhatsApp Cloud API v20.0+
         url = f"https://graph.facebook.com/v20.0/{self.phone_number_id}/messages"

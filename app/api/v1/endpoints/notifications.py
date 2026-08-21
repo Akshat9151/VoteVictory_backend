@@ -5,8 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import require_permissions
+from app.core.dependencies import get_current_user, require_permissions
 from app.core.permissions import PermissionCode
+from app.models.app_notification import AppNotification
 from app.models.notification import NotificationTemplate
 from app.models.user import User
 from app.schemas.common import APIResponse
@@ -91,4 +92,35 @@ async def list_templates(
         )
     templates = (await db.execute(stmt)).scalars().all()
     items = [TemplateResponse.model_validate(t) for t in templates]
+    return APIResponse(data=items)
+
+
+@router.get("/my", response_model=APIResponse[List[Dict[str, Any]]])
+async def list_my_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    notifications = (await db.execute(
+        select(AppNotification)
+        .where(AppNotification.user_id == current_user.id)
+        .order_by(AppNotification.created_at.desc())
+    )).scalars().all()
+
+    items = [
+        {
+            "id": item.id,
+            "type": "poster-shared",
+            "title": "Poster shared",
+            "message": item.message,
+            "timestamp": item.created_at.isoformat() if item.created_at else None,
+            "read": item.is_read,
+            "data": {"poster_id": item.related_poster_id},
+        }
+        for item in notifications
+    ]
+
+    unread = [n for n in notifications if not n.is_read]
+    for n in unread:
+        n.is_read = True
+    await db.commit()
     return APIResponse(data=items)

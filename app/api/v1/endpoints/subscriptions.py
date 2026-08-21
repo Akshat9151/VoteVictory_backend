@@ -7,6 +7,8 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.models.subscription import (
     CampaignSubscription,
     InvoiceStatus,
@@ -97,10 +99,11 @@ async def list_plans():
 
 @router.get("/current", response_model=CurrentSubscriptionOut)
 async def get_current_subscription(
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get active campaign subscription details and limits."""
-    stmt = select(CampaignSubscription).order_by(desc(CampaignSubscription.created_at))
+    stmt = select(CampaignSubscription).where(CampaignSubscription.organization_id == current_user.organization_id).order_by(desc(CampaignSubscription.created_at))
     result = await db.execute(stmt)
     sub = result.scalars().first()
     
@@ -136,6 +139,7 @@ async def get_current_subscription(
 @router.post("/upgrade", response_model=CurrentSubscriptionOut)
 async def upgrade_subscription(
     req: UpgradeSubscriptionRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Upgrade campaign subscription via payment gateway (Razorpay/Stripe/Cashfree/PayU)."""
@@ -145,6 +149,8 @@ async def upgrade_subscription(
     
     sub = CampaignSubscription(
         plan_id=req.planId,
+        organization_id=current_user.organization_id,
+        user_id=current_user.id,
         plan_name=plan_meta.name,
         status=SubscriptionStatus.ACTIVE,
         start_date=now.strftime("%d %b %Y"),
@@ -161,6 +167,7 @@ async def upgrade_subscription(
     inv_id = f"INV-{now.strftime('%Y%m')}-{str(uuid.uuid4())[:4].upper()}"
     invoice = SubscriptionInvoice(
         id=inv_id,
+        organization_id=current_user.organization_id,
         date=now.strftime("%d %b %Y"),
         plan_name=f"{plan_meta.name} (Monthly)",
         amount=plan_meta.priceMonthly,

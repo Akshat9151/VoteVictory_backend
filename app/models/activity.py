@@ -27,6 +27,9 @@ class FieldActivityLog(Base):
     id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
     volunteer_id = Column(String(64), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
     volunteer_name = Column(String(150), nullable=False)
+    title = Column(String(255), nullable=True)
+    submitted_by = Column(String(64), nullable=True, index=True)
+    submitted_by_role = Column(String(30), nullable=False, default="VOLUNTEER", index=True)
     ward = Column(String(100), nullable=True)
     booth_no = Column(String(50), nullable=True)
     activity_type = Column(String(100), nullable=False)
@@ -37,6 +40,9 @@ class FieldActivityLog(Base):
     voters_contacted = Column(Integer, default=0)
     slips_distributed = Column(Integer, default=0)
     status = Column(Enum(ActivityStatus), default=ActivityStatus.SUBMITTED, nullable=False, index=True)
+    reviewed_by = Column(String(64), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

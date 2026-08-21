@@ -43,3 +43,15 @@ async def confirm_import(
         message=f"Successfully imported {report.successfully_imported} voter records.",
         data=report
     )
+
+
+@router.delete("/{job_id}", response_model=APIResponse[bool])
+async def cancel_import(
+    request: Request,
+    job_id: str,
+    current_user: User = Depends(require_permissions(PermissionCode.VOTER_IMPORT.value)),
+    db: AsyncSession = Depends(get_db)
+):
+    service = BulkImportService(db)
+    await service.cancel_import(request, job_id, current_user)
+    return APIResponse(success=True, message="Import preview cancelled.", data=True)

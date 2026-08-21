@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -62,6 +62,10 @@ class VoterCreate(VoterBase):
     election_id: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
+
+
+class VoterBulkDeleteRequest(BaseModel):
+    voter_ids: list[Union[str, int]] = Field(..., min_length=1)
 
 
 class VoterUpdate(BaseModel):

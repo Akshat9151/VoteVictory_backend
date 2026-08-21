@@ -57,9 +57,9 @@ async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -
     return AnalyticsData(
         wardCoverage=[],
         channelDelivery=[
-            ChannelDeliveryItem(channel="WhatsApp", count=whatsapp_count or 2850, color="#059669"),
-            ChannelDeliveryItem(channel="SMS Fallback", count=sms_count or 612, color="#0284c7"),
-            ChannelDeliveryItem(channel="Failed", count=38, color="#e11d48"),
+            ChannelDeliveryItem(channel="WhatsApp", count=whatsapp_count, color="#059669"),
+            ChannelDeliveryItem(channel="SMS Fallback", count=sms_count, color="#0284c7"),
+            ChannelDeliveryItem(channel="Failed", count=0, color="#e11d48"),
         ],
         materialPrints=[
             MaterialPrintItem(type="A5 Handbill Pamphlets", count=5200),

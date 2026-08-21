@@ -28,12 +28,14 @@ class ActivityStatusUpdate(BaseModel):
 
 
 class FieldActivityCreate(BaseModel):
+    title: Optional[str] = None
     volunteer_id: Optional[str] = None
     volunteer_name: Optional[str] = "Field Volunteer"
     ward: Optional[str] = None
     booth_no: Optional[str] = None
     activity_type: str
     location: str
+    date_time: Optional[str] = None
     description: str
     photo_url: Optional[str] = None
     voters_contacted: Optional[int] = 0
@@ -44,15 +46,22 @@ class FieldActivityResponse(BaseModel):
     id: str
     volunteer_id: Optional[str] = None
     volunteer_name: str
+    title: Optional[str] = None
+    submitted_by: Optional[str] = None
+    submitted_by_role: str
     ward: Optional[str] = None
     booth_no: Optional[str] = None
     activity_type: str
     location: str
+    date_time: Optional[str] = None
     description: str
     photo_url: Optional[str] = None
     voters_contacted: int
     slips_distributed: int
     status: Union[ActivityStatus, str]
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

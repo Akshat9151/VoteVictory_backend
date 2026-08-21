@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_optional_current_user, require_permissions
+from app.core.dependencies import get_current_user, require_permissions
 from app.core.permissions import PermissionCode
 from app.models.organization import Organization
 from app.models.user import User
@@ -13,6 +13,7 @@ from app.schemas.common import APIResponse
 from app.schemas.voter import (
     AudienceSplit,
     VoterCreate,
+    VoterBulkDeleteRequest,
     VoterResponse,
     VoterUpdate,
     VoterVerificationRequest,
@@ -33,15 +34,13 @@ from app.schemas.common import APIResponse, PaginatedResponse, PaginationMeta
 @router.get("", response_model=List[VoterResponse])
 @router.get("/", response_model=List[VoterResponse])
 async def get_voters(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve all voters in the campaign electoral roll."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = VoterService(db)
     voters = await service.list_org_voters(organization_id=org_id)
-    if not voters:
-        voters = await service.list_org_voters(organization_id=None)
     return [VoterResponse.model_validate(v) for v in voters]
 
 
@@ -51,15 +50,13 @@ async def list_election_voters(
     page: int = 1,
     page_size: int = 50,
     search: Optional[str] = None,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve voters for a specific election roll."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = VoterService(db)
     voters = await service.list_org_voters(organization_id=org_id)
-    if not voters:
-        voters = await service.list_org_voters(organization_id=None)
 
     if search:
         s = search.lower()
@@ -92,11 +89,11 @@ async def list_election_voters(
 
 @router.get("/audience-split", response_model=AudienceSplit)
 async def get_audience_split(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get breakdown of voters reachable via WhatsApp vs SMS fallback."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = VoterService(db)
     split = await service.get_audience_split(organization_id=org_id)
     return split if isinstance(split, AudienceSplit) else AudienceSplit(**split)
@@ -107,7 +104,7 @@ async def get_audience_split(
 async def create_voter(
     request: Request,
     voter_in: VoterCreate,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Enroll a new voter into the campaign roll."""
@@ -120,13 +117,29 @@ async def create_voter(
 async def create_voters_batch(
     request: Request,
     voters_in: List[VoterCreate],
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Batch enroll voters (e.g. OCR roll upload or Excel import)."""
     service = VoterService(db)
     voters = await service.create_batch(request, voters_in, current_user)
     return [VoterResponse.model_validate(v) for v in voters]
+
+
+@router.delete("/bulk", response_model=APIResponse[dict])
+async def delete_voters_bulk(
+    request: Request,
+    delete_in: VoterBulkDeleteRequest,
+    current_user: User = Depends(require_permissions(PermissionCode.VOTER_UPDATE.value)),
+    db: AsyncSession = Depends(get_db)
+):
+    service = VoterService(db)
+    deleted_count = await service.delete_voters_bulk(request, [str(voter_id) for voter_id in delete_in.voter_ids], current_user)
+    return APIResponse(
+        success=True,
+        message=f"Deleted {deleted_count} voter records.",
+        data={"deleted_count": deleted_count}
+    )
 
 
 @router.get("/{voter_id}", response_model=APIResponse[VoterResponse])

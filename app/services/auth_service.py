@@ -61,9 +61,97 @@ class AuthService:
         await self._send_otp(destination, code)
         return self._otp_response(challenge_id, destination, code)
 
-    async def verify_signup_otp(self, request: Optional[Request], challenge_id: str, code: str) -> User:
+    async def verify_signup_otp(self, request: Optional[Request], challenge_id: str, code: str) -> Dict:
+        """Verify signup OTP and create account without issuing tokens."""
         challenge = self._take_otp(challenge_id, code, "signup")
-        return await self.onboard_user(request, challenge["payload"])
+        
+        # Create user and organization without issuing tokens
+        from app.core.exceptions import DuplicateResourceException
+
+        reg_in = challenge["payload"]
+        
+        if await self.user_repo.get_by_email(reg_in.email):
+            raise DuplicateResourceException("User", "email", reg_in.email)
+
+        # Handle full_name if provided, otherwise use first_name + last_name
+        if reg_in.full_name:
+            name_parts = reg_in.full_name.strip().split()
+            first_name = name_parts[0] if name_parts else reg_in.first_name or ''
+            last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else reg_in.last_name or ''
+        else:
+            first_name = reg_in.first_name.strip() if reg_in.first_name else ''
+            last_name = reg_in.last_name.strip() if reg_in.last_name else ''
+
+        # Auto-generate organization name if not provided
+        organization_name = (reg_in.organization_name or '').strip()
+        if not organization_name:
+            if first_name and last_name:
+                organization_name = f"{first_name} {last_name} Campaign".strip()
+            elif first_name:
+                organization_name = f"{first_name}'s Campaign".strip()
+            else:
+                organization_name = reg_in.email.split('@', 1)[0].strip() or "Election Campaign"
+        
+        slug_base = re.sub(r"[^a-z0-9]+", "-", organization_name.lower()).strip("-") or "workspace"
+        slug = slug_base
+        suffix = 2
+        while (await self.db.execute(select(Organization).where(Organization.slug == slug))).scalars().first():
+            slug = f"{slug_base}-{suffix}"
+            suffix += 1
+
+        organization = Organization(
+            name=organization_name,
+            slug=slug,
+            status=OrganizationStatus.ACTIVE,
+            contact_email=reg_in.email.lower().strip(),
+            contact_phone=reg_in.phone,
+        )
+        self.db.add(organization)
+        await self.db.flush()
+
+        election = Election(
+            organization_id=organization.id,
+            title=f"{organization_name} Election",
+            slug=f"{slug}-election",
+            election_type=ElectionType.LOCAL,
+            status=ElectionStatus.DRAFT,
+            visibility=ElectionVisibility.PRIVATE,
+        )
+        self.db.add(election)
+        await self.db.flush()
+
+        user = User(
+            organization_id=organization.id,
+            email=reg_in.email.lower().strip(),
+            first_name=first_name,
+            last_name=last_name,
+            phone=reg_in.phone,
+            password_hash=get_password_hash(reg_in.password),
+            is_active=True,
+            is_verified=True,
+            is_superuser=True,
+        )
+        self.db.add(user)
+        await self.db.flush()
+
+        super_role = await self.user_repo.get_role_by_code(RoleCode.SUPER_ADMIN.value)
+        if not super_role:
+            raise AuthenticationException("System roles are not initialized.")
+        self.db.add(UserRole(user_id=user.id, role_id=super_role.id))
+
+        await record_audit_log(
+            self.db,
+            request,
+            action="auth.onboard",
+            resource_type="organization",
+            resource_id=organization.id,
+            current_user=user,
+            details={"email": user.email, "election_id": election.id},
+        )
+        await self.db.commit()
+        
+        # Return success without tokens
+        return {"success": True, "email": user.email}
 
     async def request_login_otp(self, email: str, password: str) -> Dict:
         user = await self.user_repo.get_by_email(email)
@@ -121,11 +209,25 @@ class AuthService:
         if await self.user_repo.get_by_email(reg_in.email):
             raise DuplicateResourceException("User", "email", reg_in.email)
 
+        # Handle full_name if provided, otherwise use first_name + last_name
+        if reg_in.full_name:
+            name_parts = reg_in.full_name.strip().split()
+            first_name = name_parts[0] if name_parts else reg_in.first_name or ''
+            last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else reg_in.last_name or ''
+        else:
+            first_name = reg_in.first_name.strip() if reg_in.first_name else ''
+            last_name = reg_in.last_name.strip() if reg_in.last_name else ''
+
+        # Auto-generate organization name if not provided
         organization_name = (reg_in.organization_name or '').strip()
         if not organization_name:
-            organization_name = f"{reg_in.first_name.strip()} {reg_in.last_name.strip()} Campaign".strip()
-        if not organization_name:
-            organization_name = reg_in.email.split('@', 1)[0].strip() or "Election Campaign"
+            if first_name and last_name:
+                organization_name = f"{first_name} {last_name} Campaign".strip()
+            elif first_name:
+                organization_name = f"{first_name}'s Campaign".strip()
+            else:
+                organization_name = reg_in.email.split('@', 1)[0].strip() or "Election Campaign"
+        
         slug_base = re.sub(r"[^a-z0-9]+", "-", organization_name.lower()).strip("-") or "workspace"
         slug = slug_base
         suffix = 2
@@ -157,8 +259,8 @@ class AuthService:
         user = User(
             organization_id=organization.id,
             email=reg_in.email.lower().strip(),
-            first_name=reg_in.first_name.strip(),
-            last_name=reg_in.last_name.strip(),
+            first_name=first_name,
+            last_name=last_name,
             phone=reg_in.phone,
             password_hash=get_password_hash(reg_in.password),
             is_active=True,
@@ -194,10 +296,6 @@ class AuthService:
             user = await self.user_repo.get_by_email(login_data.email)
         elif login_data.phone:
             user = await self.user_repo.get_by_phone(login_data.phone)
-
-        if not user:
-            # Fallback to first available user or superadmin
-            user = await self.user_repo.get_first_user()
 
         if not user:
             await record_security_event(

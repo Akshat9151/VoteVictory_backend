@@ -27,7 +27,7 @@ class Candidate(BaseModel):
     post = Column(String(100), nullable=True)
     postType = Column(String(50), nullable=True)
     constituency_name = Column(String(255), nullable=True)
-    symbol = Column(String(50), nullable=True)
+    symbol = Column(String(512), nullable=True)
     symbolName = Column(String(100), nullable=True)
     photo = Column(String(512), nullable=True)
     slogan = Column(Text, nullable=True)

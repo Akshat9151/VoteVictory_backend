@@ -342,3 +342,23 @@ class BulkImportService:
             invalid_records=job.invalid_rows,
             errors=[]
         )
+
+    async def cancel_import(self, request: Request, job_id: str, current_user: User) -> None:
+        job = await self.job_repo.get_by_id(job_id)
+        if not job:
+            raise ResourceNotFoundException("ImportJob", job_id)
+        if job.organization_id != current_user.organization_id:
+            raise AppException(code="IMPORT_ACCESS_DENIED", message="You cannot cancel this import preview.")
+        if job.status != ImportStatus.PREVIEW_READY:
+            raise AppException(code="INVALID_JOB_STATUS", message="Only an unconfirmed import preview can be cancelled.")
+
+        await self.db.delete(job)
+        await self.db.commit()
+        await record_audit_log(
+            self.db,
+            request,
+            action="voter.import_cancelled",
+            resource_type="import_job",
+            resource_id=job_id,
+            current_user=current_user,
+        )

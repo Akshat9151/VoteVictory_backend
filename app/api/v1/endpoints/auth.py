@@ -96,11 +96,11 @@ async def request_signup_otp(data: SignupOtpRequest, db: AsyncSession = Depends(
     return APIResponse(success=True, message="Verification code sent.", data=challenge)
 
 
-@router.post("/signup/verify-otp", response_model=APIResponse[TokenResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/signup/verify-otp", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
 async def verify_signup_otp(request: Request, data: OtpVerifyRequest, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
-    token_response = await service.verify_signup_otp(request, data.challenge_id, data.code)
-    return APIResponse(success=True, message="Workspace and Super Admin account created.", data=token_response)
+    result = await service.verify_signup_otp(request, data.challenge_id, data.code)
+    return APIResponse(success=True, message="Account verified! Please log in to continue.", data=result)
 
 
 @router.post("/login/request-otp", response_model=APIResponse[OtpChallengeResponse])

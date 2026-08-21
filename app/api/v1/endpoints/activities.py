@@ -26,6 +26,7 @@ async def list_field_activities(
     ward: Optional[str] = Query(None),
     activity_type: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
+    mine: bool = Query(False),
     current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
@@ -37,8 +38,12 @@ async def list_field_activities(
         stmt = stmt.where(FieldActivityLog.activity_type == activity_type)
     if status_filter and status_filter != "all":
         stmt = stmt.where(FieldActivityLog.status == status_filter)
-    if _is_volunteer(current_user):
-        stmt = stmt.where(FieldActivityLog.volunteer_id == current_user.id)
+    if mine:
+        stmt = stmt.where(FieldActivityLog.submitted_by == current_user.id)
+    elif _is_volunteer(current_user):
+        stmt = stmt.where(FieldActivityLog.submitted_by == current_user.id)
+    elif _is_admin(current_user) and not _is_super_admin(current_user):
+        stmt = stmt.where(FieldActivityLog.submitted_by_role == "VOLUNTEER")
     stmt = stmt.order_by(desc(FieldActivityLog.created_at))
 
     result = await db.execute(stmt)
@@ -54,13 +59,16 @@ async def submit_field_activity(
 ):
     """Submit ground field activity report with photos, reach count and location."""
     activity = FieldActivityLog(
-        volunteer_id=current_user.id if _is_volunteer(current_user) else activity_in.volunteer_id,
+        volunteer_id=activity_in.volunteer_id if _is_volunteer(current_user) else None,
         volunteer_name=activity_in.volunteer_name or f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "Field Volunteer",
+        title=activity_in.title or activity_in.activity_type,
+        submitted_by=current_user.id,
+        submitted_by_role=_role_code(current_user),
         ward=activity_in.ward,
         booth_no=activity_in.booth_no,
         activity_type=activity_in.activity_type,
         location=activity_in.location,
-        date_time=datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        date_time=activity_in.date_time or datetime.now().strftime("%d %b %Y, %I:%M %p"),
         description=activity_in.description,
         photo_url=activity_in.photo_url,
         voters_contacted=activity_in.voters_contacted or 0,
@@ -81,7 +89,7 @@ async def update_field_activity_status(
     current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update field activity verification status (Approved, Rejected, Verified, Flagged)."""
+    """Update status after enforcing submitter-role review rules."""
     stmt = select(FieldActivityLog).where(FieldActivityLog.id == id)
     result = await db.execute(stmt)
     activity = result.scalars().first()
@@ -91,20 +99,85 @@ async def update_field_activity_status(
             detail=f"Field activity '{id}' not found",
         )
 
+    if not _can_review(current_user, activity):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review this field activity.")
+
     activity.status = status_in.status
+    activity.reviewed_by = current_user.id
+    activity.reviewed_at = datetime.utcnow()
+    if activity.status != ActivityStatus.FLAGGED:
+        activity.rejection_reason = None
+    await db.commit()
+    await db.refresh(activity)
+    return activity
+
+
+@router.put("/field-activities/{id}/approve", response_model=FieldActivityResponse)
+async def approve_field_activity(
+    id: str,
+    current_user: User = Depends(require_roles(["superadmin", "admin"])),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _review_field_activity(id, ActivityStatus.VERIFIED, None, current_user, db)
+
+
+@router.put("/field-activities/{id}/reject", response_model=FieldActivityResponse)
+async def reject_field_activity(
+    id: str,
+    reason: Optional[str] = Query(None),
+    current_user: User = Depends(require_roles(["superadmin", "admin"])),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _review_field_activity(id, ActivityStatus.FLAGGED, reason, current_user, db)
+
+
+async def _review_field_activity(
+    activity_id: str,
+    target_status: ActivityStatus,
+    rejection_reason: Optional[str],
+    current_user: User,
+    db: AsyncSession,
+) -> FieldActivityLog:
+    activity = (await db.execute(select(FieldActivityLog).where(FieldActivityLog.id == activity_id))).scalars().first()
+    if not activity:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Field activity '{activity_id}' not found")
+    if not _can_review(current_user, activity):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review this field activity.")
+    activity.status = target_status
+    activity.reviewed_by = current_user.id
+    activity.reviewed_at = datetime.utcnow()
+    activity.rejection_reason = rejection_reason if target_status == ActivityStatus.FLAGGED else None
     await db.commit()
     await db.refresh(activity)
     return activity
 
 
 def _is_volunteer(current_user: User) -> bool:
+    return _role_code(current_user) == "VOLUNTEER"
+
+
+def _role_code(current_user: User) -> str:
     if getattr(current_user, "is_superuser", False):
-        return False
+        return "SUPER_ADMIN"
     for user_role in getattr(current_user, "roles", []) or []:
-        role = getattr(getattr(user_role, "role", None), "code", "") or ""
-        if role.upper() == "VOLUNTEER":
-            return True
-    return False
+        role = str(getattr(getattr(user_role, "role", None), "code", "") or "").upper()
+        if role in {"SUPER_ADMIN", "ADMIN", "VOLUNTEER"}:
+            return role
+    return str(getattr(current_user, "role", "VOLUNTEER") or "VOLUNTEER").upper().replace(" ", "_")
+
+
+def _is_super_admin(current_user: User) -> bool:
+    return _role_code(current_user) == "SUPER_ADMIN"
+
+
+def _is_admin(current_user: User) -> bool:
+    return _role_code(current_user) == "ADMIN"
+
+
+def _can_review(current_user: User, activity: FieldActivityLog) -> bool:
+    if _is_super_admin(current_user):
+        return True
+    return _is_admin(current_user) and activity.submitted_by_role == "VOLUNTEER"
 
 
 # Volunteer Attendance (Section 7.7)

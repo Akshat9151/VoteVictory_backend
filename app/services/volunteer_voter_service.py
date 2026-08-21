@@ -23,8 +23,6 @@ class VolunteerVoterService:
     async def get_volunteer_voters(self, organization_id: Optional[str] = None) -> List[VolunteerVoterResponse]:
         filters = {"organization_id": organization_id} if organization_id else None
         voters = await self.repo.list_all(filters=filters)
-        if not voters and organization_id:
-            voters = await self.repo.list_all(filters=None)
         return [
             VolunteerVoterResponse(
                 id=v.id,
@@ -87,9 +85,6 @@ class VolunteerVoterService:
         ip_address: Optional[str] = None
     ) -> VolunteerVoterResponse:
         voter = await self.repo.get_by_id(id=id, organization_id=organization_id)
-        if not voter:
-            # Fallback lookup by ID without org constraint
-            voter = await self.repo.get_by_id(id=id)
         if not voter:
             raise NotFoundException(f"Volunteer voter with ID '{id}' not found.")
 

@@ -248,7 +248,11 @@ class VoterService:
 
     async def delete_voter(self, request: Request, voter_id: str, current_user: User) -> bool:
         voter = await self.get_voter(voter_id)
-        if current_user.organization_id and voter.organization_id != current_user.organization_id:
+        if (
+            not current_user.is_superuser
+            and current_user.organization_id
+            and voter.organization_id != current_user.organization_id
+        ):
             from app.core.exceptions import PermissionDeniedException
             raise PermissionDeniedException(message="Cannot delete a voter from another organization.")
 
@@ -263,6 +267,34 @@ class VoterService:
             current_user=current_user,
         )
         return True
+
+    async def delete_voters_bulk(self, request: Request, voter_ids: List[str], current_user: User) -> int:
+        unique_ids = list(dict.fromkeys(voter_ids))
+        result = await self.db.execute(select(Voter).where(Voter.id.in_(unique_ids)))
+        voters = list(result.scalars().all())
+        if len(voters) != len(unique_ids):
+            raise ResourceNotFoundException("Voter", "one or more selected records")
+        if (
+            not current_user.is_superuser
+            and current_user.organization_id
+            and any(v.organization_id != current_user.organization_id for v in voters)
+        ):
+            from app.core.exceptions import PermissionDeniedException
+            raise PermissionDeniedException(message="Cannot delete voters from another organization.")
+
+        for voter in voters:
+            await self.db.delete(voter)
+        for voter in voters:
+            await record_audit_log(
+                self.db,
+                request,
+                action="voter.delete",
+                resource_type="voter",
+                resource_id=voter.id,
+                current_user=current_user,
+            )
+        await self.db.commit()
+        return len(voters)
 
     async def verify_voter(
         self,

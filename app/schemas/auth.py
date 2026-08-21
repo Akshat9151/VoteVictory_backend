@@ -72,6 +72,7 @@ class UserRegisterRequest(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    full_name: Optional[str] = None
 
 
 class SignupOtpRequest(UserRegisterRequest):

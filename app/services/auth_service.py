@@ -177,18 +177,18 @@ class AuthService:
         return await self.authenticate_user(request, LoginRequest(email=challenge["email"], password=challenge["password"]))
 
     async def _send_otp(self, destination: str, code: str) -> None:
-        content = f"Your ElectWin verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
+        content = f"Your VoteVictory verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
         adapter = EmailProviderAdapter() if "@" in destination else SMSProviderAdapter()
         result = await adapter.send_message(destination, content, template_id="OTP_VERIFICATION")
         if not result.success:
-            raise AuthenticationException("Unable to send verification code.")
+            err = result.error_message or "Email delivery failed."
+            raise AuthenticationException(f"Failed to deliver OTP to {destination}: {err}")
 
     def _otp_response(self, challenge_id: str, destination: str, code: str) -> Dict:
         response = {
             "challenge_id": challenge_id,
             "destination": destination,
             "expires_in": settings.OTP_EXPIRE_MINUTES * 60,
-            "dev_code": str(code),
         }
         return response
 
@@ -198,8 +198,8 @@ class AuthService:
             raise AuthenticationException("Verification code is invalid for this action.")
         input_code = str(code).strip()
         expected_code = str(challenge.get("code", "")).strip()
-        if input_code != "123456" and input_code != expected_code:
-            raise AuthenticationException("Verification code is invalid or expired.")
+        if input_code != expected_code:
+            raise AuthenticationException("Invalid verification code. Please check your email inbox and enter the 6-digit code.")
         return challenge
 
     async def login(self, login_data: LoginRequest) -> TokenResponse:

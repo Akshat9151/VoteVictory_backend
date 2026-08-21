@@ -30,31 +30,31 @@ class EmailProviderAdapter(NotificationProvider):
         template_id: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> NotificationDeliveryResult:
-        if self.provider != "smtp" or not self.host or not self.username or not self.password:
-            logger.info(
-                f"[MOCK EMAIL] To: {recipient_address} | Provider: {self.provider} | "
-                f"Configured: host={'yes' if self.host else 'no'}, user={'yes' if self.username else 'no'}"
+        # Auto-detect SMTP if host, username and password are provided
+        is_smtp = (self.provider == "smtp") or bool(self.host and self.username and self.password)
+        if not is_smtp or not self.host or not self.username or not self.password:
+            logger.warning(
+                f"[EMAIL NOT CONFIGURED] To: {recipient_address} | Host: {self.host} | User: {self.username}"
             )
             return NotificationDeliveryResult(
-                success=True,
-                provider_message_id=f"mock_email_{recipient_address}",
-                status="SENT",
-                raw_response={"recipient": recipient_address, "channel": "EMAIL", "provider": "mock"},
+                success=False,
+                status="FAILED",
+                error_message="SMTP credentials are not configured in Render environment variables (SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD).",
             )
 
         def send() -> None:
             message = EmailMessage()
-            message["Subject"] = "ElectWin - Your Verification Code"
+            message["Subject"] = "VoteVictory - Your Verification Code"
             message["From"] = self.sender_email
             message["To"] = recipient_address
             message.set_content(content)
 
-            # Also add an HTML version for modern email clients
+            # Modern HTML Email Template
             html_content = f"""
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #0284c7; margin: 0;">ElectWin</h2>
-                    <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Election Campaign & War Room System</p>
+                    <h2 style="color: #0284c7; margin: 0;">VoteVictory</h2>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Election Campaign Management System</p>
                 </div>
                 <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
                     <p style="color: #334155; font-size: 14px; margin-bottom: 12px;">Your security verification code is:</p>
@@ -66,14 +66,16 @@ class EmailProviderAdapter(NotificationProvider):
             """
             message.add_alternative(html_content, subtype="html")
 
-            logger.info(f"Connecting to SMTP server {self.host}:{self.port} to send email to {recipient_address}...")
+            logger.info(f"Connecting to SMTP server {self.host}:{self.port} for {recipient_address}...")
             if self.port == 465:
-                with smtplib.SMTP_SSL(self.host, self.port, timeout=20) as smtp:
+                with smtplib.SMTP_SSL(self.host, self.port, timeout=25) as smtp:
                     smtp.login(self.username, self.password)
                     smtp.send_message(message)
             else:
-                with smtplib.SMTP(self.host, self.port, timeout=20) as smtp:
+                with smtplib.SMTP(self.host, self.port, timeout=25) as smtp:
+                    smtp.ehlo()
                     smtp.starttls()
+                    smtp.ehlo()
                     smtp.login(self.username, self.password)
                     smtp.send_message(message)
 

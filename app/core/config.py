@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+    ENABLE_TRACING: bool = True
+    OTEL_SERVICE_NAME: str = "electwin-backend"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
     API_V1_PREFIX: str = "/api/v1"
     SECRET_KEY: str = "super-secret-system-key-change-in-production-0123456789abcdef"
 

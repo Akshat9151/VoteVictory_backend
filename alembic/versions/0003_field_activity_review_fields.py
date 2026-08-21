@@ -4,7 +4,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0003_field_activity_review_fields"
-down_revision = "0002_add_user_ward"
+down_revision = "0002b_create_field_activity_logs"
 branch_labels = None
 depends_on = None
 

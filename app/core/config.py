@@ -79,12 +79,15 @@ class Settings(BaseSettings):
 
     # Notification Providers
     SMS_PROVIDER: str = "mock" # mock | twilio | msg91 | aws_sns
-    EMAIL_PROVIDER: str = "mock" # mock | smtp
+    EMAIL_PROVIDER: str = "mock" # mock | smtp | resend | brevo | sendgrid
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = "noreply@votingplatform.org"
+    RESEND_API_KEY: str = ""
+    BREVO_API_KEY: str = ""
+    SENDGRID_API_KEY: str = ""
     OTP_EXPIRE_MINUTES: int = 15
     OTP_MAX_ATTEMPTS: int = 5
     TWILIO_ACCOUNT_SID: str = ""

@@ -1,7 +1,7 @@
 """poster_shares_and_notifications
 
 Revision ID: 5ba06aedc5cc
-Revises: 0005_widen_candidate_symbol_column
+Revises: 0006_create_saved_designs_table
 Create Date: 2026-08-20 11:28:46.543102+00:00
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '5ba06aedc5cc'
-down_revision: Union[str, None] = '0005_widen_candidate_symbol_column'
+down_revision: Union[str, None] = '0006_create_saved_designs_table'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

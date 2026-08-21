@@ -16,6 +16,7 @@ from app.core.middleware import (
     SecurityHeadersMiddleware,
     StructuredLoggingMiddleware,
 )
+from app.core.tracing import configure_tracing
 
 # Configure structured root logging
 logging.basicConfig(
@@ -66,6 +67,9 @@ app = FastAPI(
 
 # Register Custom Error Handlers
 register_error_handlers(app)
+
+# Initialize tracing if dependencies are available
+configure_tracing(app)
 
 # Custom Enterprise Middlewares
 app.add_middleware(SecurityHeadersMiddleware)

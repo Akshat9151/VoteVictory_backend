@@ -83,6 +83,7 @@ class EmailProviderAdapter(NotificationProvider):
 
     async def _send_via_resend(self, recipient: str, subject: str, text: str, html: str) -> NotificationDeliveryResult:
         def call_resend():
+            url = "https://api.resend.com/emails"
             # Resend requires onboarding@resend.dev unless a custom domain is verified
             is_unverified = any(d in (self.sender_email or "").lower() for d in ["@gmail.", "@yahoo.", "@outlook.", "@hotmail.", "@yopmail.", "@votingplatform.", "@electwin."])
             from_sender = "VoteVictory <onboarding@resend.dev>"

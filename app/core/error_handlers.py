@@ -103,7 +103,7 @@ def register_error_handlers(app: FastAPI) -> None:
             message="A database error occurred during request execution.",
             request=request,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            details={"debug_info": str(exc)} if settings.DEBUG else {}
+            details={"db_error": str(exc), "debug_info": str(exc)} if settings.DEBUG else {"db_error": str(exc)}
         )
 
     @app.exception_handler(Exception)

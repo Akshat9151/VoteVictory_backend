@@ -69,10 +69,26 @@ class UserRegisterRequest(BaseModel):
     organization_name: Optional[str] = None
     email: str
     password: str = Field(..., min_length=6)
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     phone: Optional[str] = None
     full_name: Optional[str] = None
+
+    def __init__(self, **data):
+        # Support camelCase fullName or snake_case full_name
+        full = data.get("full_name") or data.get("fullName")
+        if full:
+            data["full_name"] = full
+            parts = full.strip().split()
+            if not data.get("first_name"):
+                data["first_name"] = parts[0] if parts else "User"
+            if not data.get("last_name"):
+                data["last_name"] = " ".join(parts[1:]) if len(parts) > 1 else ""
+        if not data.get("first_name"):
+            data["first_name"] = data.get("email", "").split("@")[0] or "User"
+        if not data.get("last_name"):
+            data["last_name"] = ""
+        super().__init__(**data)
 
 
 class SignupOtpRequest(UserRegisterRequest):

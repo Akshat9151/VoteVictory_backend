@@ -71,8 +71,6 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(["volunteer_id"], ["volunteer_profiles.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(op.f("ix_field_activity_logs_submitted_by"), "field_activity_logs", ["submitted_by"], unique=False)
-        op.create_index(op.f("ix_field_activity_logs_submitted_by_role"), "field_activity_logs", ["submitted_by_role"], unique=False)
 
 
 def downgrade() -> None:

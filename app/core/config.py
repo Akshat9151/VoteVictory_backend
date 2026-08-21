@@ -128,6 +128,8 @@ class Settings(BaseSettings):
                 v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
             if "sslmode=" in v:
                 v = v.replace("sslmode=", "ssl=")
+            if "-pooler." in v:
+                v = v.replace("-pooler.", ".")
         return v
 
     @field_validator("DATABASE_SYNC_URL", mode="before")
@@ -140,6 +142,8 @@ class Settings(BaseSettings):
                 v = v.replace("postgresql+asyncpg://", "postgresql://", 1)
             if "ssl=" in v and "sslmode=" not in v:
                 v = v.replace("ssl=", "sslmode=")
+            if "-pooler." in v:
+                v = v.replace("-pooler.", ".")
         return v
 
 

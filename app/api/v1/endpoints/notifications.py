@@ -1,7 +1,8 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, status
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -104,23 +105,63 @@ async def list_my_notifications(
         select(AppNotification)
         .where(AppNotification.user_id == current_user.id)
         .order_by(AppNotification.created_at.desc())
+        .limit(50)
     )).scalars().all()
 
     items = [
         {
             "id": item.id,
-            "type": "poster-shared",
-            "title": "Poster shared",
+            "type": getattr(item, "notification_type", "general") or "general",
+            "title": getattr(item, "title", "Notification") or "Notification",
             "message": item.message,
+            "link": getattr(item, "link", None) or ("/studio" if item.related_poster_id else "/"),
             "timestamp": item.created_at.isoformat() if item.created_at else None,
             "read": item.is_read,
             "data": {"poster_id": item.related_poster_id},
         }
         for item in notifications
     ]
-
-    unread = [n for n in notifications if not n.is_read]
-    for n in unread:
-        n.is_read = True
-    await db.commit()
     return APIResponse(data=items)
+
+
+@router.patch("/{notification_id}/read", response_model=APIResponse[bool])
+async def mark_notification_read(
+    notification_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        update(AppNotification)
+        .where(AppNotification.id == notification_id, AppNotification.user_id == current_user.id)
+        .values(is_read=True)
+    )
+    await db.commit()
+    return APIResponse(success=True, message="Marked as read.", data=True)
+
+
+@router.post("/mark-all-read", response_model=APIResponse[bool])
+async def mark_all_notifications_read(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        update(AppNotification)
+        .where(AppNotification.user_id == current_user.id)
+        .values(is_read=True)
+    )
+    await db.commit()
+    return APIResponse(success=True, message="All marked as read.", data=True)
+
+
+@router.delete("/{notification_id}", response_model=APIResponse[bool])
+async def delete_notification(
+    notification_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        delete(AppNotification)
+        .where(AppNotification.id == notification_id, AppNotification.user_id == current_user.id)
+    )
+    await db.commit()
+    return APIResponse(success=True, message="Notification removed.", data=True)

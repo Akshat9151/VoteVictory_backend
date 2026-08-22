@@ -59,6 +59,16 @@ class MFARequiredException(AppException):
         )
 
 
+class UnverifiedAccountException(AppException):
+    def __init__(self, challenge_id: str, destination: str, message: str = "Account email is not verified yet. A verification code has been sent to your email."):
+        super().__init__(
+            code="ACCOUNT_UNVERIFIED",
+            message=message,
+            status_code=status.HTTP_403_FORBIDDEN,
+            details={"challenge_id": challenge_id, "destination": destination, "requires_otp": True}
+        )
+
+
 class AccountLockedException(AppException):
     def __init__(self, unlock_time: Optional[str] = None):
         super().__init__(

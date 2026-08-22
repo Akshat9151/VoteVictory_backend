@@ -49,7 +49,7 @@ class UserService:
             organization_id=org_id,
             password_hash=get_password_hash(user_in.password),
             is_active=user_in.is_active,
-            is_verified=True,
+            is_verified=False,
             is_superuser=False
         )
         user = await self.user_repo.create(user)
@@ -61,6 +61,32 @@ class UserService:
         user_role = UserRole(user_id=user.id, role_id=role.id)
         self.db.add(user_role)
         await self.db.flush()
+
+        # Create real notification for team admin
+        try:
+            from app.models.app_notification import AppNotification
+            notif = AppNotification(
+                user_id=current_user.id,
+                notification_type="team-member-added",
+                title="Team Member Added",
+                message=f"{user.first_name} {user.last_name} was added to the campaign team as {requested_role}.",
+                link="/team",
+                is_read=False
+            )
+            self.db.add(notif)
+            await self.db.flush()
+        except Exception:
+            pass
+
+        # Dispatch initial welcome / verification email
+        try:
+            from app.adapters.email_adapter import EmailProviderAdapter
+            from app.core.security import generate_secure_otp
+            code = generate_secure_otp()
+            content = f"Welcome to VoteVictory! Your account has been created by your Campaign Super Admin. Your verification code is {code}."
+            await EmailProviderAdapter().send_message(user.email, content)
+        except Exception:
+            pass
 
         await record_audit_log(
             self.db,

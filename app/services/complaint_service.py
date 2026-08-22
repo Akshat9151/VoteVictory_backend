@@ -140,6 +140,24 @@ class ComplaintService:
         complaint.status = data.status
 
         await self.repo.update(complaint)
+
+        # Create real notification
+        try:
+            from app.models.app_notification import AppNotification
+            target_user_id = getattr(complaint, "reported_by_user_id", None) or (user.id if user else None)
+            if target_user_id:
+                self.db.add(AppNotification(
+                    user_id=target_user_id,
+                    notification_type="complaint-status",
+                    title="Grievance Status Updated",
+                    message=f"Grievance for {complaint.ward or 'Ward'} ({complaint.category}) was marked as '{data.status}'.",
+                    link="/complaints",
+                    is_read=False
+                ))
+                await self.db.flush()
+        except Exception:
+            pass
+
         await record_audit_log(
             db=self.db,
             action="COMPLAINT_STATUS_UPDATE",

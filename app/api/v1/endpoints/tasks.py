@@ -65,6 +65,25 @@ async def create_task(
         category=task_in.category,
     )
     db.add(task)
+    await db.flush()
+
+    # Create notification for the assignee
+    if task.assigned_to_id:
+        try:
+            from app.models.app_notification import AppNotification
+            p_val = task.priority.value if hasattr(task.priority, 'value') else str(task.priority)
+            db.add(AppNotification(
+                user_id=task.assigned_to_id,
+                notification_type="task-assigned",
+                title="New Task Assigned",
+                message=f"You have been assigned to task: '{task.title}' ({p_val} priority).",
+                link="/tasks",
+                is_read=False
+            ))
+            await db.flush()
+        except Exception:
+            pass
+
     await db.commit()
     task = (await db.execute(select(CampaignTask).options(
         selectinload(CampaignTask.assigned_to).selectinload(User.roles).selectinload(UserRole.role)

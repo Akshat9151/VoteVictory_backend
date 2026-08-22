@@ -174,6 +174,10 @@ class AuthService:
 
     async def verify_login_otp(self, request: Optional[Request], challenge_id: str, code: str) -> TokenResponse:
         challenge = self._take_otp(challenge_id, code, "login")
+        user = await self.user_repo.get_by_email(challenge["email"])
+        if user and not user.is_verified:
+            user.is_verified = True
+            await self.user_repo.update(user)
         return await self.authenticate_user(request, LoginRequest(email=challenge["email"], password=challenge["password"]))
 
     async def _send_otp(self, destination: str, code: str) -> None:
@@ -364,6 +368,15 @@ class AuthService:
                     organization_id=user.organization_id
                 )
                 raise AuthenticationException("Invalid MFA TOTP verification code.")
+
+        # Check if account requires first-time OTP verification
+        if not user.is_verified:
+            from app.core.exceptions import UnverifiedAccountException
+            challenge_data = await self.request_login_otp(user.email, login_data.password or "")
+            raise UnverifiedAccountException(
+                challenge_id=challenge_data["challenge_id"],
+                destination=challenge_data["destination"]
+            )
 
         # Reset failed login count and lockout on successful auth
         user.failed_login_attempts = 0

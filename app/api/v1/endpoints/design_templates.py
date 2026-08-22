@@ -238,7 +238,10 @@ async def share_design(
         created.append(recipient_id)
         db.add(AppNotification(
             user_id=recipient_id,
-            message=f"{current_user.first_name} {current_user.last_name} shared a poster with you.",
+            notification_type="poster-shared",
+            title="Poster Shared With You",
+            message=f"{current_user.first_name} {current_user.last_name} shared a campaign poster with you.",
+            link="/studio",
             related_poster_id=design_id,
             is_read=False,
         ))

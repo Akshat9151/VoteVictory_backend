@@ -147,6 +147,24 @@ async def _review_field_activity(
     activity.reviewed_by = current_user.id
     activity.reviewed_at = datetime.utcnow()
     activity.rejection_reason = rejection_reason if target_status == ActivityStatus.FLAGGED else None
+
+    # Create notification for the activity submitter
+    if activity.user_id:
+        try:
+            from app.models.app_notification import AppNotification
+            status_label = "Approved" if target_status == ActivityStatus.VERIFIED else "Flagged / Rejected"
+            db.add(AppNotification(
+                user_id=activity.user_id,
+                notification_type="activity-approved",
+                title=f"Field Activity {status_label}",
+                message=f"Your field report '{activity.title or 'Activity'}' was marked as {status_label}.",
+                link="/field-activities",
+                is_read=False
+            ))
+            await db.flush()
+        except Exception:
+            pass
+
     await db.commit()
     await db.refresh(activity)
     return activity

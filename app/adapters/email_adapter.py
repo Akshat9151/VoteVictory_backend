@@ -132,15 +132,16 @@ class EmailProviderAdapter(NotificationProvider):
                 "textContent": text,
                 "htmlContent": html,
             }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={
-                    "api-key": self.brevo_api_key,
-                    "Content-Type": "application/json",
-                    "User-Agent": "VoteVictory/1.0",
-                },
-            )
+            headers = {
+                "api-key": str(self.brevo_api_key or "").strip(),
+                "accept": "application/json",
+                "Content-Type": "application/json",
+                "User-Agent": "VoteVictory/1.0",
+            }
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"))
+            for k, v in headers.items():
+                req.add_header(k, v)
+
             with urllib.request.urlopen(req, timeout=15) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
                 return res_data.get("messageId", "brevo_msg")

@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
+    GoogleAuthRequest,
     LoginRequest,
     MFASetupResponse,
     MFAVerifyRequest,
@@ -195,3 +196,17 @@ async def confirm_mfa(
     service = AuthService(db)
     success = await service.confirm_mfa(current_user, verify_in.totp_code)
     return APIResponse(success=True, message="MFA successfully activated.", data=success)
+
+@router.post("/google", response_model=APIResponse[TokenResponse])
+async def google_auth(
+    request: Request,
+    data: GoogleAuthRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    service = AuthService(db)
+    token_response = await service.authenticate_google(request, data.credential)
+    return APIResponse(
+        success=True,
+        message="Google authentication successful.",
+        data=token_response
+    )

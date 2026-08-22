@@ -105,3 +105,10 @@ async def root_status():
         "database": "PostgreSQL",
         "docs": "/docs",
     }
+
+
+@app.get("/api/v1/health", tags=["Health"])
+async def health_check():
+    """Lightweight health / warm-up endpoint. Called by the frontend on page load
+    so the Render free-tier server is already awake by the time the user hits Sign In."""
+    return {"status": "ok", "service": settings.PROJECT_NAME}

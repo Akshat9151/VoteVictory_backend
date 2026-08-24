@@ -202,7 +202,7 @@ class VoterService:
 
     async def update_voter(self, request: Request, voter_id: str, voter_in: VoterUpdate, current_user: User) -> Voter:
         voter = await self.get_voter(voter_id)
-        prev_state = {"first_name": voter.first_name, "status": voter.status.value}
+        prev_state = {"first_name": voter.first_name, "status": voter.status}
 
         if voter_in.name is not None:
             name_parts = voter_in.name.strip().split(None, 1)
@@ -263,7 +263,7 @@ class VoterService:
             resource_id=voter.id,
             current_user=current_user,
             prev_state=prev_state,
-            new_state={"first_name": updated.first_name, "status": updated.status.value}
+            new_state={"first_name": updated.first_name, "status": updated.status}
         )
         return updated
 

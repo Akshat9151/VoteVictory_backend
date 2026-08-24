@@ -92,7 +92,10 @@ class VoterService:
             org_id = election.organization_id if election else None
         if not org_id:
             raise ResourceNotFoundException("Organization", "for voter enrollment")
-        voter_name = voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}".strip() or "Voter"
+        voter_name = (voter_in.name or f"{voter_in.first_name or ''} {voter_in.last_name or ''}").strip() or "Voter"
+        name_parts = voter_name.split(None, 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
         voter_id_num = getattr(voter_in, "id", None) or voter_in.voter_id_number
 
         if voter_id_num:
@@ -112,8 +115,8 @@ class VoterService:
             polling_station_id=voter_in.polling_station_id,
             name=voter_name,
             voter_id_number=voter_id_num,
-            first_name=voter_in.first_name or voter_name.split()[0],
-            last_name=voter_in.last_name or (" ".join(voter_name.split()[1:]) if len(voter_name.split()) > 1 else ""),
+            first_name=first_name,
+            last_name=last_name,
             father_or_spouse_name=voter_in.father_or_spouse_name,
             date_of_birth=voter_in.date_of_birth,
             age=voter_in.age or 35,
@@ -123,8 +126,8 @@ class VoterService:
             email=voter_in.email,
             address=voter_in.address or voter_in.house or "",
             house_number=voter_in.house_number or voter_in.house or "",
-            ward=voter_in.ward or voter_in.ward_name or "Ward 01",
-            ward_name=voter_in.ward_name or voter_in.ward or "Ward 01",
+            ward=voter_in.ward_name.strip(),
+            ward_name=voter_in.ward_name.strip(),
             channel=voter_in.channel or "WhatsApp",
             consent=voter_in.consent or "Verified",
             source=voter_in.source or "Official Roll",
@@ -201,10 +204,17 @@ class VoterService:
         voter = await self.get_voter(voter_id)
         prev_state = {"first_name": voter.first_name, "status": voter.status.value}
 
+        if voter_in.name is not None:
+            name_parts = voter_in.name.strip().split(None, 1)
+            voter.first_name = name_parts[0] if name_parts else ""
+            voter.last_name = name_parts[1] if len(name_parts) > 1 else ""
+            voter.name = voter_in.name.strip()
         if voter_in.first_name is not None:
             voter.first_name = voter_in.first_name.strip()
         if voter_in.last_name is not None:
             voter.last_name = voter_in.last_name.strip()
+        if voter_in.first_name is not None or voter_in.last_name is not None:
+            voter.name = f"{voter.first_name or ''} {voter.last_name or ''}".strip()
         if voter_in.father_or_spouse_name is not None:
             voter.father_or_spouse_name = voter_in.father_or_spouse_name
         if voter_in.date_of_birth is not None:
@@ -215,6 +225,10 @@ class VoterService:
             voter.gender = voter_in.gender
         if voter_in.phone_number is not None:
             voter.phone_number = voter_in.phone_number
+            voter.mobile = voter_in.phone_number
+        if voter_in.mobile is not None:
+            voter.mobile = voter_in.mobile
+            voter.phone_number = voter_in.mobile
         if voter_in.email is not None:
             voter.email = voter_in.email
         if voter_in.address is not None:
@@ -222,9 +236,16 @@ class VoterService:
         if voter_in.house_number is not None:
             voter.house_number = voter_in.house_number
         if voter_in.ward_name is not None:
-            voter.ward_name = voter_in.ward_name
+            voter.ward_name = voter_in.ward_name.strip()
+            voter.ward = voter.ward_name
         if voter_in.status is not None:
             voter.status = voter_in.status
+        if voter_in.channel is not None:
+            voter.channel = voter_in.channel
+        if voter_in.consent is not None:
+            voter.consent = voter_in.consent
+        if voter_in.source is not None:
+            voter.source = voter_in.source
         if voter_in.constituency_id is not None:
             voter.constituency_id = voter_in.constituency_id
         if voter_in.polling_station_id is not None:

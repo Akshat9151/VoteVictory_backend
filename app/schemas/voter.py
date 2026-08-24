@@ -59,6 +59,7 @@ class VoterBase(BaseModel):
 
 
 class VoterCreate(VoterBase):
+    ward_name: str = Field(..., min_length=1)
     election_id: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
@@ -69,6 +70,7 @@ class VoterBulkDeleteRequest(BaseModel):
 
 
 class VoterUpdate(BaseModel):
+    name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     father_or_spouse_name: Optional[str] = None
@@ -76,11 +78,15 @@ class VoterUpdate(BaseModel):
     age: Optional[int] = None
     gender: Optional[str] = None
     phone_number: Optional[str] = None
+    mobile: Optional[str] = None
     email: Optional[EmailStr] = None
     address: Optional[str] = None
     house_number: Optional[str] = None
-    ward_name: Optional[str] = None
+    ward_name: Optional[str] = Field(None, min_length=1)
     status: Optional[str] = None
+    channel: Optional[str] = None
+    consent: Optional[str] = None
+    source: Optional[str] = None
     constituency_id: Optional[str] = None
     polling_station_id: Optional[str] = None
     notes: Optional[str] = None

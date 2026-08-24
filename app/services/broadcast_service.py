@@ -175,7 +175,10 @@ class BroadcastService:
             if not mobile:
                 excluded += 1
                 continue
-            channel = "whatsapp" if (voter.channel or "").strip().lower() == "whatsapp" else "sms"
+            requested_channel = (payload.channel_overrides or {}).get(voter.id, "")
+            if requested_channel not in {"whatsapp", "sms"}:
+                requested_channel = "whatsapp" if (voter.channel or "").strip().lower() == "whatsapp" else "sms"
+            channel = requested_channel
             included.append((voter, mobile, channel))
 
         if not included:

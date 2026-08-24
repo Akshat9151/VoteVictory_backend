@@ -196,10 +196,13 @@ async def upgrade_subscription(
 
 @router.get("/invoices", response_model=List[InvoiceOut])
 async def list_invoices(
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve billing history and payment invoice records (Section 12)."""
-    stmt = select(SubscriptionInvoice).order_by(desc(SubscriptionInvoice.created_at))
+    stmt = select(SubscriptionInvoice).where(
+        SubscriptionInvoice.organization_id == current_user.organization_id
+    ).order_by(desc(SubscriptionInvoice.created_at))
     result = await db.execute(stmt)
     invoices = result.scalars().all()
     

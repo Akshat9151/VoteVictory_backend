@@ -1,4 +1,4 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
@@ -17,6 +17,7 @@ from app.schemas.broadcast import (
     BroadcastResponse,
     BroadcastSendResponse,
     DeliveryLogResponse,
+    BroadcastBulkDeleteRequest,
 )
 from app.schemas.voter import AudienceSplit
 from app.services.broadcast_service import BroadcastService
@@ -121,5 +122,29 @@ async def get_broadcast_group_results(group_id: str, current_user: User = Depend
 async def get_broadcast_group_logs(group_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         return await BroadcastService(db).group_logs(group_id, current_user.organization_id)
+    except ValueError as error:
+        raise_bad_request(error)
+
+@router.delete("/groups/bulk")
+async def bulk_delete_broadcast_groups(
+    request: BroadcastBulkDeleteRequest,
+    current_user: User = Depends(require_roles(["superadmin", "admin"])),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        deleted_count = await BroadcastService(db).delete_groups_bulk(request.group_ids, current_user.organization_id)
+        return {"success": True, "message": f"Deleted {deleted_count} broadcast groups.", "data": {"deleted_count": deleted_count}}
+    except ValueError as error:
+        raise_bad_request(error)
+
+@router.delete("/groups/{group_id}")
+async def delete_broadcast_group(
+    group_id: str,
+    current_user: User = Depends(require_roles(["superadmin", "admin"])),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        await BroadcastService(db).delete_group(group_id, current_user.organization_id)
+        return {"success": True, "message": "Broadcast group deleted successfully.", "data": True}
     except ValueError as error:
         raise_bad_request(error)

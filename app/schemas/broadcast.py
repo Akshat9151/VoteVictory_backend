@@ -68,3 +68,6 @@ class BroadcastLogItem(BaseModel):
     status: str
     provider_response: Optional[str] = None
     sent_at: Optional[str] = None
+
+class BroadcastBulkDeleteRequest(BaseModel):
+    group_ids: List[str]

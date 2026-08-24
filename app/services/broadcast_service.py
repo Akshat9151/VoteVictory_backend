@@ -286,3 +286,22 @@ class BroadcastService:
         if not group:
             raise ValueError("Broadcast group not found.")
         return group
+
+    async def delete_group(self, group_id: str, organization_id: str) -> bool:
+        group = await self._get_group(group_id, organization_id)
+        await self.db.delete(group)
+        await self.db.commit()
+        return True
+
+    async def delete_groups_bulk(self, group_ids: list[str], organization_id: str) -> int:
+        result = await self.db.execute(select(BroadcastGroup).where(
+            BroadcastGroup.id.in_(group_ids),
+            BroadcastGroup.organization_id == organization_id
+        ))
+        groups = result.scalars().all()
+        deleted_count = 0
+        for group in groups:
+            await self.db.delete(group)
+            deleted_count += 1
+        await self.db.commit()
+        return deleted_count

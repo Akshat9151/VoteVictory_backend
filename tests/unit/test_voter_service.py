@@ -2,7 +2,9 @@ import pytest
 
 from app.core.exceptions import ConflictException
 from app.schemas.voter import VoterCreate
+from app.schemas.voter import VoterUpdate
 from app.services.voter_service import VoterService
+from starlette.requests import Request
 
 
 @pytest.mark.asyncio
@@ -72,3 +74,28 @@ async def test_audience_split_calculation(db_session, test_org):
     assert split.total >= 10
     assert split.whatsapp + split.sms == split.total
     assert split.whatsappPercent + split.smsPercent >= 99  # Rounding tolerance
+
+
+@pytest.mark.asyncio
+async def test_update_voter_persists_name_and_ward(db_session, test_org):
+    service = VoterService(db_session)
+    voter = await service.add_voter(
+        VoterCreate(name="Akshat Jain", age=30, gender="Male", ward="Ward 01"),
+        organization_id=test_org.id,
+    )
+    request = Request({"type": "http", "method": "PUT", "path": f"/voters/{voter.id}", "headers": [], "client": ("test", 80), "query_string": b"", "server": ("test", 80), "scheme": "http"})
+    actor = type("Actor", (), {"id": "test-actor", "email": "test@example.com", "organization_id": test_org.id, "role": "ADMIN"})()
+
+    updated = await service.update_voter(
+        request,
+        voter.id,
+        VoterUpdate(name="Rajesh Kumar Sharma", first_name="Rajesh", last_name="Kumar Sharma", ward_name="Ward 09"),
+        actor,
+    )
+    await db_session.refresh(updated)
+
+    assert updated.name == "Rajesh Kumar Sharma"
+    assert updated.first_name == "Rajesh"
+    assert updated.last_name == "Kumar Sharma"
+    assert updated.ward == "Ward 09"
+    assert updated.ward_name == "Ward 09"

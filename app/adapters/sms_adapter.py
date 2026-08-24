@@ -68,6 +68,13 @@ class SMSProviderAdapter(NotificationProvider):
                         raw_response=data
                     )
                 else:
+                    logger.error(
+                        "Twilio SMS failed: status=%s code=%s message=%s recipient=%s",
+                        resp.status_code,
+                        data.get("code"),
+                        data.get("message", "Twilio API error"),
+                        recipient_address,
+                    )
                     return ProviderSendResult(
                         success=False,
                         status="FAILED",

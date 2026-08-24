@@ -3,7 +3,7 @@ import time
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from jinja2 import Template, TemplateSyntaxError
+from jinja2 import Template
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -175,10 +175,7 @@ class BroadcastService:
             if not mobile:
                 excluded += 1
                 continue
-            requested_channel = (payload.channel_overrides or {}).get(voter.id, "")
-            if requested_channel not in {"whatsapp", "sms"}:
-                requested_channel = "whatsapp" if (voter.channel or "").strip().lower() == "whatsapp" else "sms"
-            channel = requested_channel
+            channel = "whatsapp" if (voter.channel or "").strip().lower() == "whatsapp" else "sms"
             included.append((voter, mobile, channel))
 
         if not included:
@@ -220,10 +217,6 @@ class BroadcastService:
             raise ValueError("Message text cannot be empty.")
         if group.status == "SENT":
             raise ValueError("A sent broadcast cannot be edited.")
-        try:
-            Template(payload.message_text)
-        except TemplateSyntaxError as error:
-            raise ValueError("Message contains an invalid placeholder. Use {{name}}, {{ward}}, or {{booth}}.") from error
         group.message_text = payload.message_text
         group.status = "READY"
         await self.db.commit()
@@ -237,10 +230,7 @@ class BroadcastService:
         if group.status == "SENT":
             return await self.group_results(group_id, organization_id)
 
-        try:
-            rendered_message = Template(group.message_text).render
-        except TemplateSyntaxError as error:
-            raise ValueError("Message contains an invalid placeholder. Edit and save the draft again using {{name}}, {{ward}}, or {{booth}}.") from error
+        rendered_message = Template(group.message_text).render
         logs = []
         for member in list(group.members or []):
             variables = {"name": member.voter_name, "ward": member.ward or "General Ward", "booth": "your polling booth", "symbol": ""}

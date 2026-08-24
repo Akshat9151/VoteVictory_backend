@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import logging
-import re
 import uuid
 from typing import Any, Dict, Optional
 
@@ -27,7 +26,6 @@ class SMSProviderAdapter(NotificationProvider):
         template_id: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None
     ) -> ProviderSendResult:
-        recipient_address = self._normalize_recipient(recipient_address)
         if self.provider == "mock":
             # Production simulated mock provider
             msg_id = f"mock_sms_{uuid.uuid4().hex[:12]}"
@@ -68,13 +66,6 @@ class SMSProviderAdapter(NotificationProvider):
                         raw_response=data
                     )
                 else:
-                    logger.error(
-                        "Twilio SMS failed: status=%s code=%s message=%s recipient=%s",
-                        resp.status_code,
-                        data.get("code"),
-                        data.get("message", "Twilio API error"),
-                        recipient_address,
-                    )
                     return ProviderSendResult(
                         success=False,
                         status="FAILED",
@@ -88,15 +79,6 @@ class SMSProviderAdapter(NotificationProvider):
                 status="FAILED",
                 error_message=str(e)
             )
-
-    @staticmethod
-    def _normalize_recipient(recipient_address: str) -> str:
-        value = re.sub(r"[\s()-]", "", (recipient_address or "").strip())
-        if re.fullmatch(r"[6-9]\d{9}", value):
-            return f"+91{value}"
-        if value.startswith("0091") and len(value) == 14:
-            return f"+{value[2:]}"
-        return value
 
     def verify_webhook_signature(self, raw_body: bytes, signature_header: str) -> bool:
         if not settings.WEBHOOK_SECRET_SMS:

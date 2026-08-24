@@ -50,12 +50,9 @@ class AuthService:
         if await self.user_repo.get_by_email(request_data.email):
             from app.core.exceptions import DuplicateResourceException
             raise DuplicateResourceException("User", "email", request_data.email)
-        if request_data.phone and await self.user_repo.get_by_phone(request_data.phone):
-            from app.core.exceptions import DuplicateResourceException
-            raise DuplicateResourceException("User", "phone", request_data.phone)
 
         code = generate_secure_otp()
-        destination = request_data.phone or request_data.email
+        destination = request_data.email or request_data.phone
         payload_data = request_data.model_dump() if hasattr(request_data, "model_dump") else dict(request_data)
         challenge_token = create_otp_challenge_token({
             "purpose": "signup",
@@ -159,20 +156,17 @@ class AuthService:
         # Return success without tokens
         return {"success": True, "email": user.email}
 
-    async def request_login_otp(self, identifier: str, password: str) -> Dict:
-        is_phone = "@" not in identifier
-        user = await (self.user_repo.get_by_phone(identifier) if is_phone else self.user_repo.get_by_email(identifier))
+    async def request_login_otp(self, email: str, password: str) -> Dict:
+        user = await self.user_repo.get_by_email(email)
         if not user or not verify_password(password, user.password_hash):
-            raise AuthenticationException("Invalid email/phone or password.")
+            raise AuthenticationException("Invalid email or password.")
         code = generate_secure_otp()
-        destination = user.phone if is_phone else user.email
-        if not destination:
-            raise AuthenticationException("No phone number or email is registered for this account.")
+        destination = user.email or user.phone
         challenge_token = create_otp_challenge_token({
             "purpose": "login",
             "code": str(code),
             "destination": destination,
-            "identifier": identifier,
+            "email": email,
             "password": password,
         })
         await self._send_otp(destination, code)
@@ -180,13 +174,11 @@ class AuthService:
 
     async def verify_login_otp(self, request: Optional[Request], challenge_id: str, code: str) -> TokenResponse:
         challenge = self._take_otp(challenge_id, code, "login")
-        identifier = challenge.get("identifier") or challenge.get("email")
-        user = await (self.user_repo.get_by_phone(identifier) if "@" not in identifier else self.user_repo.get_by_email(identifier))
+        user = await self.user_repo.get_by_email(challenge["email"])
         if user and not user.is_verified:
             user.is_verified = True
             await self.user_repo.update(user)
-        login_data = LoginRequest(phone=identifier, password=challenge["password"]) if "@" not in identifier else LoginRequest(email=identifier, password=challenge["password"])
-        return await self.authenticate_user(request, login_data)
+        return await self.authenticate_user(request, LoginRequest(email=challenge["email"], password=challenge["password"]))
 
     async def _send_otp(self, destination: str, code: str) -> None:
         content = f"Your VoteVictory verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
@@ -380,7 +372,7 @@ class AuthService:
         # Check if account requires first-time OTP verification
         if not user.is_verified:
             from app.core.exceptions import UnverifiedAccountException
-            challenge_data = await self.request_login_otp(login_data.email or login_data.phone or user.email, login_data.password or "")
+            challenge_data = await self.request_login_otp(user.email, login_data.password or "")
             raise UnverifiedAccountException(
                 challenge_id=challenge_data["challenge_id"],
                 destination=challenge_data["destination"]

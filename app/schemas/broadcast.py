@@ -32,7 +32,6 @@ class BroadcastGroupCreate(BaseModel):
     name: Optional[str] = None
     voter_ids: List[str] = []
     filter_criteria_snapshot: dict[str, Any] = {}
-    channel_overrides: dict[str, str] = {}
 
 
 class BroadcastGroupResponse(BaseModel):

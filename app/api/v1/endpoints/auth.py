@@ -97,11 +97,12 @@ async def request_signup_otp(data: SignupOtpRequest, db: AsyncSession = Depends(
     return APIResponse(success=True, message="Verification code sent.", data=challenge)
 
 
-@router.post("/signup/verify-otp", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
+@router.post("/signup/verify-otp", response_model=APIResponse[TokenResponse], status_code=status.HTTP_201_CREATED)
 async def verify_signup_otp(request: Request, data: OtpVerifyRequest, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     result = await service.verify_signup_otp(request, data.challenge_id, data.code)
-    return APIResponse(success=True, message="Account verified! Please log in to continue.", data=result)
+    return APIResponse(success=True, message="Account created and signed in successfully!", data=result)
+
 
 
 @router.post("/login/request-otp", response_model=APIResponse[OtpChallengeResponse])
@@ -118,18 +119,19 @@ async def verify_login_otp(request: Request, data: OtpVerifyRequest, db: AsyncSe
     return APIResponse(success=True, message="Authentication successful.", data=token_response)
 
 
-@router.post("/forgot-password", response_model=APIResponse[bool])
+@router.post("/forgot-password", response_model=APIResponse[OtpChallengeResponse])
+@router.post("/forgot-password/request-otp", response_model=APIResponse[OtpChallengeResponse])
 async def forgot_password(
     data: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Initiate password recovery flow."""
+    """Initiate password recovery with instant email OTP."""
     service = AuthService(db)
-    await service.forgot_password(data.email)
+    challenge = await service.request_forgot_password_otp(data.email)
     return APIResponse(
         success=True,
-        message="If this email is registered, a password reset link has been dispatched.",
-        data=True
+        message="Password reset verification code sent to your email.",
+        data=challenge
     )
 
 
@@ -138,14 +140,22 @@ async def reset_password(
     data: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db)
 ):
-    """Confirm password reset with token."""
+    """Confirm password reset with OTP code."""
+    from app.core.exceptions import AuthenticationException
     service = AuthService(db)
-    await service.reset_password(data.token, data.new_password)
+    challenge_id = data.challenge_id or data.token
+    if challenge_id and data.code:
+        await service.reset_password_with_otp(challenge_id, data.code, data.new_password)
+    elif data.token:
+        await service.reset_password(data.token, data.new_password)
+    else:
+        raise AuthenticationException("Verification code is required.")
     return APIResponse(
         success=True,
-        message="Password updated successfully.",
+        message="Password updated successfully. Please log in with your new password.",
         data=True
     )
+
 
 
 @router.post("/refresh", response_model=APIResponse[TokenResponse])

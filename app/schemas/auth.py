@@ -133,8 +133,10 @@ class PasswordResetRequest(BaseModel):
 
 
 class PasswordResetConfirm(BaseModel):
-    token: str
-    new_password: str = Field(..., min_length=8)
+    challenge_id: Optional[str] = None
+    token: Optional[str] = None
+    code: Optional[str] = None
+    new_password: str = Field(..., min_length=6)
 
 
 class ChangePasswordRequest(BaseModel):

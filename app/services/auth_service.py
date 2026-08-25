@@ -47,9 +47,15 @@ class AuthService:
     _otp_challenges: Dict[str, Dict] = {}
 
     async def request_signup_otp(self, request_data) -> Dict:
+        if getattr(request_data, "email", None):
+            email_val = request_data.email.strip().lower()
+            if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email_val):
+                raise AuthenticationException("Please enter a valid, complete email address (e.g. name@gmail.com).")
+
         if await self.user_repo.get_by_email(request_data.email):
             from app.core.exceptions import DuplicateResourceException
             raise DuplicateResourceException("User", "email", request_data.email)
+
 
         code = generate_secure_otp()
         destination = request_data.email or request_data.phone
@@ -153,8 +159,9 @@ class AuthService:
         )
         await self.db.commit()
         
-        # Return success without tokens
-        return {"success": True, "email": user.email}
+        # Immediately authenticate and log the new user in with full session tokens
+        return await self.authenticate_user(request, LoginRequest(email=user.email, password=reg_in.password))
+
 
     async def request_login_otp(self, email: str, password: str) -> Dict:
         user = await self.user_repo.get_by_email(email)
@@ -179,6 +186,52 @@ class AuthService:
             user.is_verified = True
             await self.user_repo.update(user)
         return await self.authenticate_user(request, LoginRequest(email=challenge["email"], password=challenge["password"]))
+
+    async def request_forgot_password_otp(self, email: str) -> Dict:
+        clean_email = email.lower().strip()
+        user = await self.user_repo.get_by_email(clean_email)
+        if not user:
+            raise AuthenticationException("No registered account found with this email address.")
+        
+        code = generate_secure_otp()
+        destination = user.email
+        challenge_token = create_otp_challenge_token({
+            "purpose": "password_reset",
+            "code": str(code),
+            "destination": destination,
+            "email": clean_email,
+        })
+        await self._send_password_reset_otp(destination, code)
+        return self._otp_response(challenge_token, destination, code)
+
+    async def _send_password_reset_otp(self, destination: str, code: str) -> None:
+        content = f"Your VoteVictory Password Reset verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
+        adapter = EmailProviderAdapter() if "@" in destination else SMSProviderAdapter()
+        result = await adapter.send_message(destination, content, template_id="OTP_PASSWORD_RESET")
+        if not result.success:
+            err = result.error_message or "Email delivery failed."
+            raise AuthenticationException(f"Failed to deliver OTP to {destination}: {err}")
+
+    async def reset_password_with_otp(self, challenge_id: str, code: str, new_password: str) -> bool:
+        challenge = self._take_otp(challenge_id, code, "password_reset")
+        clean_email = challenge.get("email", "").lower().strip()
+        user = await self.user_repo.get_by_email(clean_email)
+        if not user:
+            raise AuthenticationException("User account not found.")
+        
+        user.password_hash = get_password_hash(new_password)
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        if not user.is_verified:
+            user.is_verified = True
+        await self.user_repo.update(user)
+        return True
+
+    async def forgot_password(self, email: str) -> Dict:
+        return await self.request_forgot_password_otp(email)
+
+    async def reset_password(self, token: str, new_password: str) -> bool:
+        return await self.reset_password_with_otp(token, "", new_password)
 
     async def _send_otp(self, destination: str, code: str) -> None:
         content = f"Your VoteVictory verification code is {code}. It expires in {settings.OTP_EXPIRE_MINUTES} minutes."
@@ -300,9 +353,13 @@ class AuthService:
     async def authenticate_user(self, request: Optional[Request], login_data: LoginRequest) -> TokenResponse:
         user = None
         if login_data.email:
-            user = await self.user_repo.get_by_email(login_data.email)
+            email_val = login_data.email.strip().lower()
+            if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email_val):
+                raise AuthenticationException("Please enter a valid, complete email address (e.g. name@gmail.com).")
+            user = await self.user_repo.get_by_email(email_val)
         elif login_data.phone:
             user = await self.user_repo.get_by_phone(login_data.phone)
+
 
         if not user:
             await record_security_event(
@@ -470,11 +527,13 @@ class AuthService:
         from sqlalchemy import select
 
         try:
+            target_aud = settings.GOOGLE_CLIENT_ID if (settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_ID.strip()) else None
             idinfo = id_token.verify_oauth2_token(
-                credential_token, requests.Request(), settings.GOOGLE_CLIENT_ID, clock_skew_in_seconds=10
+                credential_token, requests.Request(), audience=target_aud, clock_skew_in_seconds=10
             )
         except Exception as e:
             raise AuthenticationException(f"Invalid Google token: {str(e)}")
+
 
         email = idinfo.get("email")
         if not email:

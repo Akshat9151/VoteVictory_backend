@@ -26,6 +26,22 @@ logging.basicConfig(
 logger = logging.getLogger("app.main")
 
 
+import asyncio
+from sqlalchemy import text
+
+async def keep_neon_alive():
+    """Background heartbeat to keep serverless Neon DB warm and prevent cold-start latency."""
+    while True:
+        try:
+            await asyncio.sleep(120)  # Ping every 2 minutes
+            async with AsyncSessionLocal() as session:
+                await session.execute(text("SELECT 1"))
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup & shutdown lifecycle events."""
@@ -49,9 +65,14 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "candidates"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "documents"), exist_ok=True)
 
+    # 4. Start background database keep-alive task
+    keep_alive_task = asyncio.create_task(keep_neon_alive())
+
     logger.info("Application startup completed successfully with PostgreSQL database.")
     yield
+    keep_alive_task.cancel()
     logger.info("Shutting down application...")
+
 
 
 # FastAPI Application instance

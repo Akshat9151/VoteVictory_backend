@@ -13,16 +13,19 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User, db)
 
     async def get_by_email(self, email: str) -> Optional[User]:
+        cleaned = email.lower().strip()
         stmt = (
             select(User)
             .execution_options(populate_existing=True)
             .options(
                 selectinload(User.roles).selectinload(UserRole.role).selectinload(Role.permissions).selectinload(RolePermission.permission)
             )
-            .where(User.email == email.lower().strip())
+            .where(User.email == cleaned)
         )
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+
 
     async def get_by_phone(self, phone: str) -> Optional[User]:
         cleaned = phone.strip()

@@ -22,12 +22,15 @@ if "sqlite" not in settings.DATABASE_URL:
         "pool_size": settings.DB_POOL_SIZE,
         "max_overflow": settings.DB_MAX_OVERFLOW,
         "pool_timeout": settings.DB_POOL_TIMEOUT,
+        "pool_recycle": 300,
         "pool_pre_ping": True,
         "connect_args": {
             "statement_cache_size": 0,
             "prepared_statement_cache_size": 0,
+            "command_timeout": 30,
         },
     })
+
 
 async_engine = create_async_engine(settings.DATABASE_URL, **async_engine_kwargs)
 

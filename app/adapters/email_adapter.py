@@ -21,15 +21,16 @@ class EmailProviderAdapter(NotificationProvider):
     """
 
     def __init__(self):
-        self.provider = settings.EMAIL_PROVIDER.lower()
-        self.host = settings.SMTP_HOST
-        self.port = int(settings.SMTP_PORT or 587)
-        self.username = settings.SMTP_USERNAME
-        self.password = settings.SMTP_PASSWORD
-        self.sender_email = settings.SMTP_FROM_EMAIL or self.username or "onboarding@resend.dev"
-        self.resend_api_key = settings.RESEND_API_KEY
-        self.brevo_api_key = settings.BREVO_API_KEY
-        self.sendgrid_api_key = settings.SENDGRID_API_KEY
+        import os
+        self.provider = (settings.EMAIL_PROVIDER or os.environ.get("EMAIL_PROVIDER", "")).lower()
+        self.host = settings.SMTP_HOST or os.environ.get("SMTP_HOST", "")
+        self.port = int(settings.SMTP_PORT or os.environ.get("SMTP_PORT", 587))
+        self.username = settings.SMTP_USERNAME or os.environ.get("SMTP_USERNAME", "")
+        self.password = settings.SMTP_PASSWORD or os.environ.get("SMTP_PASSWORD", "")
+        self.sender_email = settings.SMTP_FROM_EMAIL or os.environ.get("SMTP_FROM_EMAIL") or self.username or "onboarding@resend.dev"
+        self.resend_api_key = settings.RESEND_API_KEY or os.environ.get("RESEND_API_KEY", "")
+        self.brevo_api_key = settings.BREVO_API_KEY or os.environ.get("BREVO_API_KEY", "")
+        self.sendgrid_api_key = settings.SENDGRID_API_KEY or os.environ.get("SENDGRID_API_KEY", "")
 
     async def send_message(
         self,
@@ -38,8 +39,12 @@ class EmailProviderAdapter(NotificationProvider):
         template_id: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> NotificationDeliveryResult:
-        subject = "VoteVictory - Your Verification Code"
+        if template_id == "OTP_PASSWORD_RESET" or "Password Reset" in content:
+            subject = "VoteVictory - Password Reset Verification Code"
+        else:
+            subject = "VoteVictory - Your Verification Code"
         otp_code = content.split("is ")[-1].split(".")[0] if "is " in content else content
+
         
         html_content = f"""
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">

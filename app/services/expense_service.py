@@ -43,8 +43,9 @@ class ExpenseService:
             updated_at=created_val,
         )
 
-    async def get_expenses(self, organization_id: Optional[str] = None) -> List[ExpenseResponse]:
-        expenses = await self.repo.list_all(organization_id=organization_id)
+    async def get_expenses(self, organization_id: Optional[str] = None, election_id: Optional[str] = None) -> List[ExpenseResponse]:
+        filters = {"election_id": election_id} if election_id else None
+        expenses = await self.repo.list_all(filters=filters, organization_id=organization_id)
         return [self._to_response(e) for e in expenses]
 
     async def add_expense(
@@ -78,6 +79,7 @@ class ExpenseService:
         expense = Expense(
             id=expense_id,
             organization_id=organization_id,
+            election_id=data.election_id,
             category=data.category,
             amount=data.amount,
             date=date_str,
@@ -104,10 +106,14 @@ class ExpenseService:
 
         return self._to_response(expense)
 
-    async def get_budget_summary(self, organization_id: Optional[str] = None) -> BudgetSummary:
+    async def get_budget_summary(self, organization_id: Optional[str] = None, election_id: Optional[str] = None) -> BudgetSummary:
         budget_limit = settings.STATUTORY_BUDGET_LIMIT
-        total_spent = await self.repo.get_total_spent(organization_id=organization_id)
-        expenses = await self.repo.list_all(organization_id=organization_id)
+        if election_id:
+            expenses = await self.repo.list_all(filters={"election_id": election_id}, organization_id=organization_id)
+            total_spent = sum(expense.amount for expense in expenses)
+        else:
+            total_spent = await self.repo.get_total_spent(organization_id=organization_id)
+            expenses = await self.repo.list_all(organization_id=organization_id)
         expense_count = len(expenses)
 
         remaining = max(0.0, budget_limit - total_spent)

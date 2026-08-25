@@ -32,6 +32,8 @@ async def list_field_activities(
 ):
     """List real-time ground field activities with photo evidence."""
     stmt = select(FieldActivityLog)
+    if not _is_super_admin(current_user):
+        stmt = stmt.where(FieldActivityLog.organization_id == current_user.organization_id)
     if ward:
         stmt = stmt.where(FieldActivityLog.ward == ward)
     if activity_type:
@@ -59,6 +61,7 @@ async def submit_field_activity(
 ):
     """Submit ground field activity report with photos, reach count and location."""
     activity = FieldActivityLog(
+        organization_id=current_user.organization_id,
         volunteer_id=activity_in.volunteer_id if _is_volunteer(current_user) else None,
         volunteer_name=activity_in.volunteer_name or f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "Field Volunteer",
         title=activity_in.title or activity_in.activity_type,
@@ -99,7 +102,7 @@ async def update_field_activity_status(
             detail=f"Field activity '{id}' not found",
         )
 
-    if not _can_review(current_user, activity):
+    if activity.organization_id != current_user.organization_id or not _can_review(current_user, activity):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review this field activity.")
 
     activity.status = status_in.status
@@ -121,9 +124,9 @@ async def delete_field_activity(
     activity = (await db.execute(select(FieldActivityLog).where(FieldActivityLog.id == id))).scalars().first()
     if not activity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Field activity '{id}' not found")
-    can_delete = _is_super_admin(current_user) or activity.submitted_by == current_user.id or (
+    can_delete = (_is_super_admin(current_user) or activity.organization_id == current_user.organization_id) and (activity.submitted_by == current_user.id or (
         _is_admin(current_user) and activity.submitted_by_role == "VOLUNTEER"
-    )
+    ))
     if not can_delete:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot delete this field activity.")
     await db.delete(activity)

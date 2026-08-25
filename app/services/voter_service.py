@@ -27,18 +27,17 @@ class VoterService:
         self.db = db
         self.voter_repo = VoterRepository(db)
 
-    async def list_org_voters(self, organization_id: Optional[str] = None) -> List[Voter]:
+    async def list_org_voters(self, organization_id: Optional[str] = None, election_id: Optional[str] = None) -> List[Voter]:
         stmt = select(Voter)
         if organization_id:
             stmt = stmt.where(Voter.organization_id == organization_id)
+        if election_id:
+            stmt = stmt.where(Voter.election_id == election_id)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_audience_split(self, organization_id: Optional[str] = None) -> AudienceSplit:
         voters = await self.list_org_voters(organization_id)
-        if not voters:
-            voters = await self.list_org_voters(None)
-
         total = len(voters)
         whatsapp = sum(1 for v in voters if v.channel == "WhatsApp" and v.mobile)
         sms = sum(1 for v in voters if v.channel != "WhatsApp" or not v.mobile)
@@ -194,14 +193,14 @@ class VoterService:
             search_fields=["first_name", "last_name", "voter_id_number", "phone_number", "ward_name"]
         )
 
-    async def get_voter(self, voter_id: str) -> Voter:
-        voter = await self.voter_repo.get_by_id(voter_id)
+    async def get_voter(self, voter_id: str, organization_id: Optional[str] = None) -> Voter:
+        voter = await self.voter_repo.get_by_id(voter_id, organization_id=organization_id)
         if not voter:
             raise ResourceNotFoundException("Voter", voter_id)
         return voter
 
     async def update_voter(self, request: Request, voter_id: str, voter_in: VoterUpdate, current_user: User) -> Voter:
-        voter = await self.get_voter(voter_id)
+        voter = await self.get_voter(voter_id, organization_id=None if getattr(current_user, "is_superuser", False) else current_user.organization_id)
         prev_state = {"first_name": voter.first_name, "status": voter.status}
 
         if voter_in.name is not None:
@@ -268,7 +267,7 @@ class VoterService:
         return updated
 
     async def delete_voter(self, request: Request, voter_id: str, current_user: User) -> bool:
-        voter = await self.get_voter(voter_id)
+        voter = await self.get_voter(voter_id, organization_id=None if getattr(current_user, "is_superuser", False) else current_user.organization_id)
         if (
             not current_user.is_superuser
             and current_user.organization_id

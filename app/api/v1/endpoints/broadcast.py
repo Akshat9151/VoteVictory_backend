@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import check_broadcast_rate_limit, get_current_user, get_optional_current_user, require_roles
+from app.core.dependencies import check_broadcast_rate_limit, get_current_user, require_roles
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.broadcast import (
@@ -37,11 +37,11 @@ async def get_default_org_id(db: AsyncSession) -> str:
 
 @router.get("/delivery-logs", response_model=List[DeliveryLogResponse])
 async def get_delivery_logs(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve message delivery audit history."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = BroadcastService(db)
     return await service.get_delivery_logs(organization_id=org_id)
 
@@ -50,11 +50,11 @@ async def get_delivery_logs(
 @router.get("/audience-split/{election_id}", response_model=AudienceSplit)
 async def get_broadcast_audience_split(
     election_id: Optional[str] = None,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve audience breakdown of electors reachable via WhatsApp vs SMS fallback."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = VoterService(db)
     split = await service.get_audience_split(organization_id=org_id)
     return split if isinstance(split, AudienceSplit) else AudienceSplit(**split)

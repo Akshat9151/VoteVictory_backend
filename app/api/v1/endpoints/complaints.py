@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user
+from app.core.dependencies import get_current_user
 from app.core.exceptions import PermissionDeniedException
 from app.models.organization import Organization
 from app.models.user import User
@@ -24,15 +24,15 @@ async def get_default_org_id(db: AsyncSession) -> str:
 @router.get("", response_model=List[ComplaintResponse])
 @router.get("/", response_model=List[ComplaintResponse])
 async def get_complaints(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve voter grievance complaints."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ComplaintService(db)
     if current_user and current_user.is_superuser:
         return await service.get_complaints(organization_id=None)
-    return await service.get_complaints(organization_id=org_id, created_by_user_id=current_user.id if current_user else None)
+    return await service.get_complaints(organization_id=org_id, created_by_user_id=current_user.id)
 
 
 @router.get("/election/{election_id}", response_model=APIResponse[PaginatedResponse[ComplaintResponse]])
@@ -40,11 +40,11 @@ async def list_election_complaints(
     election_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve grievances associated with an active election."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ComplaintService(db)
     if current_user and current_user.is_superuser:
         items = await service.get_complaints(organization_id=None, election_id=election_id)

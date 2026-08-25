@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user, require_roles
+from app.core.dependencies import get_current_user, require_roles
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.volunteer_voter import (
@@ -25,11 +25,11 @@ async def get_default_org_id(db: AsyncSession) -> str:
 
 @router.get("", response_model=List[VolunteerVoterResponse])
 async def get_volunteer_voters(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve voter canvassing records assigned to volunteers."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = VolunteerVoterService(db)
     return await service.get_volunteer_voters(organization_id=org_id)
 

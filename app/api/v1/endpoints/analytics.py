@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_optional_current_user
+from app.core.dependencies import get_current_user
 from app.models.organization import Organization
 from app.models.team import Volunteer
 from app.models.user import User
@@ -73,11 +73,11 @@ async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -
 
 @router.get("/charts", response_model=APIResponse[AnalyticsChartsResponse])
 async def get_analytics_charts(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve time-series charts, area/volunteer performance and funnels."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = AnalyticsService(db)
     charts = await service.get_charts_data(organization_id=org_id)
     return APIResponse(success=True, data=charts)
@@ -86,11 +86,11 @@ async def get_analytics_charts(
 @router.get("/election/{election_id}/turnout", response_model=APIResponse[AnalyticsData])
 async def get_election_turnout_analytics(
     election_id: str,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve election turnout analytics breakdown for the analytics page."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     data = await build_analytics_data(db, org_id)
     return APIResponse(
         success=True,
@@ -102,9 +102,9 @@ async def get_election_turnout_analytics(
 @router.get("", response_model=AnalyticsData)
 @router.get("/", response_model=AnalyticsData)
 async def get_analytics(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve operational analytics, ward coverage, channel delivery and volunteer productivity."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     return await build_analytics_data(db, org_id)

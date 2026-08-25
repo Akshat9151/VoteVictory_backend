@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_optional_current_user, require_roles
+from app.core.dependencies import get_current_user, require_roles
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.common import APIResponse, PaginatedResponse, PaginationMeta
@@ -24,11 +24,11 @@ async def get_default_org_id(db: AsyncSession) -> str:
 @router.get("", response_model=List[ExpenseResponse])
 @router.get("/", response_model=List[ExpenseResponse])
 async def get_expenses(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List campaign election expenditure records."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ExpenseService(db)
     return await service.get_expenses(organization_id=org_id)
 
@@ -38,13 +38,13 @@ async def list_election_expenses(
     election_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List election expenses with pagination for the election dashboard."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ExpenseService(db)
-    items = await service.get_expenses(organization_id=org_id)
+    items = await service.get_expenses(organization_id=org_id, election_id=election_id)
     total_items = len(items)
     pagination = PaginationMeta(
         page=page,
@@ -64,13 +64,13 @@ async def list_election_expenses(
 @router.get("/election/{election_id}/summary", response_model=APIResponse[BudgetSummary])
 async def get_election_budget_summary(
     election_id: str,
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve election budget summary and statutory ceiling utilization for an election."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ExpenseService(db)
-    summary = await service.get_budget_summary(organization_id=org_id)
+    summary = await service.get_budget_summary(organization_id=org_id, election_id=election_id)
     return APIResponse(
         success=True,
         message="Budget summary calculated.",
@@ -139,10 +139,10 @@ async def delete_expense(
 
 @router.get("/budget-summary", response_model=BudgetSummary)
 async def get_budget_summary(
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve election budget summary and statutory ceiling utilization."""
-    org_id = current_user.organization_id if current_user else await get_default_org_id(db)
+    org_id = current_user.organization_id
     service = ExpenseService(db)
     return await service.get_budget_summary(organization_id=org_id)

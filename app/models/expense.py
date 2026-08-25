@@ -12,6 +12,7 @@ class Expense(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"exp_{uuid.uuid4().hex[:8]}")
     organization_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    election_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("elections.id", ondelete="SET NULL"), nullable=True, index=True)
     category: Mapped[str] = mapped_column(String(150), nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     date: Mapped[str] = mapped_column(String(64), nullable=False)

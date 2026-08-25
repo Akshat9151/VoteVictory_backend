@@ -25,6 +25,7 @@ class FieldActivityLog(Base):
     __tablename__ = "field_activity_logs"
 
     id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
     volunteer_id = Column(String(64), ForeignKey("volunteer_profiles.id", ondelete="CASCADE"), nullable=True)
     volunteer_name = Column(String(150), nullable=False)
     title = Column(String(255), nullable=True)

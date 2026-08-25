@@ -56,7 +56,7 @@ async def list_election_voters(
     """Retrieve voters for a specific election roll."""
     org_id = current_user.organization_id
     service = VoterService(db)
-    voters = await service.list_org_voters(organization_id=org_id)
+    voters = await service.list_org_voters(organization_id=org_id, election_id=election_id)
 
     if search:
         s = search.lower()
@@ -70,15 +70,16 @@ async def list_election_voters(
             or s in (v.mobile or "").lower()
         ]
 
-    items = [VoterResponse.model_validate(v) for v in voters]
-    total_items = len(items)
+    total_items = len(voters)
+    start = (page - 1) * page_size
+    items = [VoterResponse.model_validate(v) for v in voters[start:start + page_size]]
     pagination = PaginationMeta(
         page=page,
         page_size=page_size,
         total_items=total_items,
         total_pages=max(1, (total_items + page_size - 1) // page_size),
-        has_next=False,
-        has_prev=False
+        has_next=start + page_size < total_items,
+        has_prev=page > 1
     )
     return APIResponse(
         success=True,
@@ -149,7 +150,7 @@ async def get_voter(
     db: AsyncSession = Depends(get_db)
 ):
     service = VoterService(db)
-    voter = await service.get_voter(voter_id)
+    voter = await service.get_voter(voter_id, organization_id=None if current_user.is_superuser else current_user.organization_id)
     return APIResponse(data=VoterResponse.model_validate(voter))
 
 

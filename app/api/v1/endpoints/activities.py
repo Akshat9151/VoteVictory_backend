@@ -124,9 +124,12 @@ async def delete_field_activity(
     activity = (await db.execute(select(FieldActivityLog).where(FieldActivityLog.id == id))).scalars().first()
     if not activity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Field activity '{id}' not found")
-    can_delete = (_is_super_admin(current_user) or activity.organization_id == current_user.organization_id) and (activity.submitted_by == current_user.id or (
-        _is_admin(current_user) and activity.submitted_by_role == "VOLUNTEER"
-    ))
+    can_delete = _is_super_admin(current_user) or (
+        activity.organization_id == current_user.organization_id
+        and (activity.submitted_by == current_user.id or (
+            _is_admin(current_user) and activity.submitted_by_role == "VOLUNTEER"
+        ))
+    )
     if not can_delete:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot delete this field activity.")
     await db.delete(activity)

@@ -124,3 +124,11 @@ class ExpenseService:
             expense_count=expense_count,
             expenseCount=expense_count,
         )
+
+    async def delete_expense(self, expense_id: str, organization_id: str) -> bool:
+        expense = await self.repo.get_by_id(expense_id)
+        if not expense or expense.organization_id != organization_id:
+            return False
+        await self.db.delete(expense)
+        await self.db.commit()
+        return True

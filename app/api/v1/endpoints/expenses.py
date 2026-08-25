@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -122,6 +123,18 @@ async def add_election_expense(
         message="Expense logged successfully.",
         data=created,
     )
+
+
+@router.delete("/{expense_id}", status_code=204, dependencies=[Depends(require_roles(["superadmin", "admin"]))])
+async def delete_expense(
+    expense_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExpenseService(db)
+    deleted = await service.delete_expense(expense_id, current_user.organization_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Expense not found")
 
 
 @router.get("/budget-summary", response_model=BudgetSummary)

@@ -112,6 +112,24 @@ async def update_field_activity_status(
     return activity
 
 
+@router.delete("/field-activities/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_field_activity(
+    id: str,
+    current_user: User = Depends(require_roles(["superadmin", "admin", "volunteer"])),
+    db: AsyncSession = Depends(get_db),
+):
+    activity = (await db.execute(select(FieldActivityLog).where(FieldActivityLog.id == id))).scalars().first()
+    if not activity:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Field activity '{id}' not found")
+    can_delete = _is_super_admin(current_user) or activity.submitted_by == current_user.id or (
+        _is_admin(current_user) and activity.submitted_by_role == "VOLUNTEER"
+    )
+    if not can_delete:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot delete this field activity.")
+    await db.delete(activity)
+    await db.commit()
+
+
 @router.put("/field-activities/{id}/approve", response_model=FieldActivityResponse)
 async def approve_field_activity(
     id: str,

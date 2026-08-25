@@ -20,11 +20,12 @@ router = APIRouter(prefix="/dashboard", tags=["Operational Dashboard Command Cen
 
 @router.get("/superadmin", response_model=APIResponse[SuperAdminDashboardResponse])
 async def get_super_admin_dashboard(
+    election_id: Optional[str] = None,
     current_user: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     service = DashboardService(db)
-    data = await service.get_super_admin_dashboard()
+    data = await service.get_super_admin_dashboard(election_id=election_id)
     return APIResponse(data=data)
 
 

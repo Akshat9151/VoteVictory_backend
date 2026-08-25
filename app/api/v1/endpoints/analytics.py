@@ -29,7 +29,7 @@ async def get_default_org_id(db: AsyncSession) -> str:
     return org.id if org else "default_org"
 
 
-async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -> AnalyticsData:
+async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None, election_id: Optional[str] = None) -> AnalyticsData:
     # Fetch volunteers for productivity
     vol_stmt = select(Volunteer)
     if org_id:
@@ -40,6 +40,8 @@ async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -
     voter_stmt = select(Voter)
     if org_id:
         voter_stmt = voter_stmt.where(Voter.organization_id == org_id)
+    if election_id:
+        voter_stmt = voter_stmt.where(Voter.election_id == election_id)
     voters = list((await db.execute(voter_stmt)).scalars().all())
 
     whatsapp_count = sum(1 for v in voters if getattr(v, "channel", None) == "WhatsApp" and getattr(v, "mobile", None))
@@ -48,25 +50,26 @@ async def build_analytics_data(db: AsyncSession, org_id: Optional[str] = None) -
     vol_productivity = [
         VolunteerProductivityItem(
             name=v.name,
-            slips=getattr(v, "slipsDistributed", 500) or 500,
-            calls=getattr(v, "callsMade", 300) or 300,
+            slips=getattr(v, "slipsDistributed", 0) or 0,
+            calls=getattr(v, "callsMade", 0) or 0,
         )
         for v in volunteers
     ]
 
     return AnalyticsData(
-        wardCoverage=[],
+        wardCoverage=[
+            WardCoverageItem(
+                ward=ward or "Unknown",
+                percentage=round((reached / total) * 100) if total else 0,
+            )
+            for ward, total, reached in _ward_reach(voters)
+        ],
         channelDelivery=[
             ChannelDeliveryItem(channel="WhatsApp", count=whatsapp_count, color="#059669"),
             ChannelDeliveryItem(channel="SMS Fallback", count=sms_count, color="#0284c7"),
             ChannelDeliveryItem(channel="Failed", count=0, color="#e11d48"),
         ],
-        materialPrints=[
-            MaterialPrintItem(type="A5 Handbill Pamphlets", count=5200),
-            MaterialPrintItem(type="Flex Road Banners (3x6ft)", count=48),
-            MaterialPrintItem(type="Panna Pocket Slips", count=3500),
-            MaterialPrintItem(type="Digital WhatsApp Cards", count=1840),
-        ],
+        materialPrints=[],
         volunteerProductivity=vol_productivity,
     )
 
@@ -91,7 +94,7 @@ async def get_election_turnout_analytics(
 ):
     """Retrieve election turnout analytics breakdown for the analytics page."""
     org_id = current_user.organization_id
-    data = await build_analytics_data(db, org_id)
+    data = await build_analytics_data(db, org_id, election_id=election_id)
     return APIResponse(
         success=True,
         message="Turnout analytics retrieved.",
@@ -108,3 +111,14 @@ async def get_analytics(
     """Retrieve operational analytics, ward coverage, channel delivery and volunteer productivity."""
     org_id = current_user.organization_id
     return await build_analytics_data(db, org_id)
+
+
+def _ward_reach(voters: list[Voter]) -> list[tuple[str, int, int]]:
+    grouped: dict[str, list[Voter]] = {}
+    for voter in voters:
+        ward = getattr(voter, "ward_name", None) or getattr(voter, "ward", None) or "Unknown"
+        grouped.setdefault(ward, []).append(voter)
+    return [
+        (ward, len(ward_voters), sum(1 for voter in ward_voters if getattr(voter, "mobile", None) or getattr(voter, "phone_number", None)))
+        for ward, ward_voters in sorted(grouped.items())
+    ]

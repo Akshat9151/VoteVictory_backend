@@ -40,15 +40,21 @@ class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_super_admin_dashboard(self) -> SuperAdminDashboardResponse:
+    async def get_super_admin_dashboard(self, election_id: Optional[str] = None) -> SuperAdminDashboardResponse:
         org_count = len((await self.db.execute(select(Organization))).scalars().all())
         user_count = len((await self.db.execute(select(User))).scalars().all())
         elections = (await self.db.execute(select(Election))).scalars().all()
         active_elec = sum(1 for e in elections if e.status == ElectionStatus.LIVE)
         comp_elec = sum(1 for e in elections if e.status == ElectionStatus.CLOSED)
-        voters = (await self.db.execute(select(Voter))).scalars().all()
+        voter_stmt = select(Voter)
+        if election_id:
+            voter_stmt = voter_stmt.where(Voter.election_id == election_id)
+        voters = (await self.db.execute(voter_stmt)).scalars().all()
         total_voters = len(voters)
-        candidates = (await self.db.execute(select(Candidate))).scalars().all()
+        candidate_stmt = select(Candidate)
+        if election_id:
+            candidate_stmt = candidate_stmt.where(Candidate.election_id == election_id)
+        candidates = (await self.db.execute(candidate_stmt)).scalars().all()
         total_candidates = len(candidates)
 
         audit_stmt = select(AuditLog).order_by(desc(AuditLog.created_at)).limit(10)
@@ -97,6 +103,8 @@ class DashboardService:
         voter_stmt = select(Voter)
         if organization_id:
             voter_stmt = voter_stmt.where(Voter.organization_id == organization_id)
+        if election_id:
+            voter_stmt = voter_stmt.where(Voter.election_id == election_id)
         voters = (await self.db.execute(voter_stmt)).scalars().all()
         total_voters = len(voters)
 
@@ -104,6 +112,8 @@ class DashboardService:
         sub_stmt = select(DataSubmission).options(selectinload(DataSubmission.volunteer))
         if organization_id:
             sub_stmt = sub_stmt.where(DataSubmission.organization_id == organization_id)
+        if election_id:
+            sub_stmt = sub_stmt.where(DataSubmission.election_id == election_id)
         submissions = (await self.db.execute(sub_stmt)).scalars().all()
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)

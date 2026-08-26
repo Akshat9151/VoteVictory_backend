@@ -267,6 +267,156 @@ async def seed_system_data(db: AsyncSession) -> None:
                 ]
             }
         },
+        {
+            "name": "Royal Navy & Gold Rally",
+            "category": "poster",
+            "format_name": "Rally Poster",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/royal_navy_gold.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#0A192F",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "Crimson Bold Youth Poster",
+            "category": "poster",
+            "format_name": "Youth Campaign Poster",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/crimson_bold_youth.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#FAFAFA",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "Emerald Gram Vikas Poster",
+            "category": "poster",
+            "format_name": "Vikas Sankalp Poster",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/emerald_gram_vikas.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#F0FDF4",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "Tricolor Rashtriya Gaurav",
+            "category": "poster",
+            "format_name": "National Tricolor Poster",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/tricolor_rashtriya_gaurav.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#FFFFFF",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "Royal Purple Elite Poster",
+            "category": "poster",
+            "format_name": "Modern Purple Creative",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/royal_purple_elite.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#FAF5FF",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "Maroon Heritage Sarpanch",
+            "category": "poster",
+            "format_name": "Heritage Premium Poster",
+            "format_dims": "1080 x 1350 px",
+            "asset": "/assets/maroon_heritage_sarpanch.png",
+            "width": 1080,
+            "height": 1350,
+            "layout": {
+                "bg_color": "#FFFBEB",
+                "width": 1080,
+                "height": 1350,
+                "elements": []
+            }
+        },
+        {
+            "name": "WhatsApp Status Story Card",
+            "category": "social",
+            "format_name": "WhatsApp Story / Reel",
+            "format_dims": "1080 x 1920 px",
+            "asset": "/assets/whatsapp_status_story.png",
+            "width": 1080,
+            "height": 1920,
+            "layout": {
+                "bg_color": "#0F172A",
+                "width": 1080,
+                "height": 1920,
+                "elements": []
+            }
+        },
+        {
+            "name": "Square Social Post",
+            "category": "social",
+            "format_name": "Instagram & FB Post",
+            "format_dims": "1080 x 1080 px",
+            "asset": "/assets/square_social_post.png",
+            "width": 1080,
+            "height": 1080,
+            "layout": {
+                "bg_color": "#FFFFFF",
+                "width": 1080,
+                "height": 1080,
+                "elements": []
+            }
+        },
+        {
+            "name": "Grand Victory Hoarding",
+            "category": "banner",
+            "format_name": "Wide Highway Banner",
+            "format_dims": "1920 x 1080 px",
+            "asset": "/assets/grand_victory_hoarding.png",
+            "width": 1920,
+            "height": 1080,
+            "layout": {
+                "bg_color": "#0A192F",
+                "width": 1920,
+                "height": 1080,
+                "elements": []
+            }
+        },
+        {
+            "name": "Gram Vikas Sankalp Patrika",
+            "category": "pamphlet",
+            "format_name": "Election Manifesto Patrika",
+            "format_dims": "1080 x 1528 px",
+            "asset": "/assets/gram_vikas_sankalp_patrika.png",
+            "width": 1080,
+            "height": 1528,
+            "layout": {
+                "bg_color": "#F8FAFC",
+                "width": 1080,
+                "height": 1528,
+                "elements": []
+            }
+        },
     ]
     existing_templates = {t.name: t for t in (await db.execute(select(DesignTemplate))).scalars().all()}
     for item in templates:

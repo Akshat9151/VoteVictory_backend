@@ -47,30 +47,30 @@ async def lifespan(app: FastAPI):
     """Application startup & shutdown lifecycle events."""
     logger.info(f"Starting {settings.PROJECT_NAME} (Environment: {settings.ENVIRONMENT})...")
 
-    # 1. Initialize PostgreSQL Database Tables & Relations
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # 2. Seed Initial System Data & Super Admin
-    async with AsyncSessionLocal() as session:
-        try:
-            await seed_system_data(session)
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Error during system bootstrap: {str(e)}", exc_info=True)
-
-    # 3. Ensure upload directories exist
+    # 1. Ensure upload directories exist instantly
     os.makedirs(settings.LOCAL_STORAGE_DIR, exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "candidates"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_DIR, "documents"), exist_ok=True)
 
-    # 4. Start background database keep-alive task
+    # 2. Async non-blocking database schema & seed initialization
+    async def async_bootstrap():
+        try:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            async with AsyncSessionLocal() as session:
+                await seed_system_data(session)
+                await session.commit()
+            logger.info("Async DB schema check and seeding completed.")
+        except Exception as e:
+            logger.error(f"Error during async bootstrap: {e}")
+
+    bootstrap_task = asyncio.create_task(async_bootstrap())
     keep_alive_task = asyncio.create_task(keep_neon_alive())
 
     logger.info("Application startup completed successfully with PostgreSQL database.")
     yield
     keep_alive_task.cancel()
+    bootstrap_task.cancel()
     logger.info("Shutting down application...")
 
 

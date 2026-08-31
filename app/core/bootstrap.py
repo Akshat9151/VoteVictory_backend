@@ -429,7 +429,7 @@ async def seed_system_data(db: AsyncSession) -> None:
         else:
             db.add(DesignTemplate(
                 name=item["name"],
-                election_type="panchayat",
+
                 category=item["category"],
                 format_name=item["format_name"],
                 format_dims=item["format_dims"],
